@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Trắc nghiệm Pro | Hoàn chỉnh</title>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.2/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #f1f5f9; font-family: system-ui, 'Segoe UI', Roboto, sans-serif; }
+        
+        .upload-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #f1f5f9; display: flex; align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+        .upload-box {
+            background: white; border-radius: 2rem; padding: 2rem 3rem;
+            text-align: center; cursor: pointer;
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s;
+        }
+        .upload-box:hover { background: #f8fafc; border-color: #1f6e94; }
+        .upload-btn { background: #1f6e94; color: white; border: none; padding: 0.6rem 1.8rem; border-radius: 60px; font-size: 0.9rem; cursor: pointer; margin-top: 1rem; }
+        .file-name { margin-top: 0.5rem; font-size: 0.8rem; color: #2c7a4d; }
+        #fileInputUpload { display: none; }
+        
+        .app { max-width: 1400px; margin: 0 auto; padding: 1rem; display: none; }
+        .top-bar {
+            background: white; border-radius: 1.5rem; padding: 0.7rem 1.5rem;
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.8rem;
+            margin-bottom: 1rem;
+        }
+        .logo h2 { font-size: 1.2rem; color: #1e5a7a; }
+        .action-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .btn-sm { background: #eef2f8; border: none; padding: 0.4rem 0.8rem; border-radius: 60px; cursor: pointer; font-size: 0.75rem; transition: all 0.2s; }
+        .btn-sm:hover { background: #e2e8f0; transform: translateY(-1px); }
+        .menu-btn {
+            position: fixed; left: 20px; top: 50%; transform: translateY(-50%);
+            background: #1f6e94; color: white; border: none; border-radius: 60px;
+            width: 48px; height: 48px; font-size: 1.5rem; cursor: pointer; z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .right-sidebar {
+            position: fixed; top: 0; right: 0; height: 100%; width: 380px;
+            background: white; box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+            transform: translateX(100%); transition: transform 0.3s ease;
+            z-index: 99; display: flex; flex-direction: column; padding: 1rem;
+            overflow-y: auto;
+        }
+        .right-sidebar.open { transform: translateX(0); }
+        .left-panel {
+            background: white; border-radius: 1.5rem; padding: 1.2rem;
+            max-height: 80vh; overflow-y: auto;
+        }
+        .question-card {
+            border: 1px solid #eef2f8; border-radius: 1rem; padding: 1rem; margin-bottom: 1rem;
+            transition: all 0.2s;
+            background: white;
+        }
+        .question-card.dragging { opacity: 0.5; }
+        .question-card.correct-card { border-left: 5px solid #2c9c7c; background: #f0fff4; }
+        .question-card.wrong-card { border-left: 5px solid #dc3545; background: #fff5f5; }
+        .question-card.hidden { display: none; }
+        .drag-handle {
+            display: inline-block;
+            margin-right: 10px;
+            cursor: grab;
+            color: #999;
+            font-size: 1.2rem;
+        }
+        .drag-handle:active { cursor: grabbing; }
+        .question-text { font-weight: 600; margin-bottom: 0.5rem; }
+        .options-list { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.5rem; }
+        .option-item {
+            display: flex; align-items: center; gap: 8px; padding: 0.3rem 0.8rem;
+            border-radius: 60px; background: #fafcff; border: 1px solid #e2e9f2;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .option-item:hover { background: #eef2f8; transform: translateX(5px); }
+        .opt-letter { font-weight: bold; min-width: 28px; background: #eef2f9; text-align: center; border-radius: 60px; padding: 2px; }
+        .option-item.correct-active { background: #c8e6df; border-color: #2c9c7c; }
+        .option-item.selected { background: #2196f3; color: white; border-color: #2196f3; }
+        .option-item.selected .opt-letter { background: white; color: #2196f3; }
+        .nav-circles { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 1rem 0; max-height: 400px; overflow-y: auto; padding: 0.5rem; }
+        .nav-circle {
+            width: 40px; height: 40px; border-radius: 50%; background: #eef2f8;
+            border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center;
+            font-weight: 600; cursor: pointer; font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        .nav-circle:hover { transform: scale(1.05); background: #1f6e94; color: white; }
+        .nav-circle.answered { background: #2c9c7c; color: white; border-color: #2c9c7c; }
+        .nav-circle.result-correct { background: #2c9c7c; color: white; }
+        .nav-circle.result-wrong { background: #dc3545; color: white; }
+        .filter-buttons { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1rem; flex-wrap: wrap; }
+        .filter-btn { background: #eef2f8; border: none; padding: 0.3rem 1rem; border-radius: 60px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
+        .filter-btn.active { background: #1f6e94; color: white; }
+        .submit-btn { background: #1f6e94; color: white; border: none; padding: 0.5rem; border-radius: 60px; cursor: pointer; width: 100%; margin-top: 0.5rem; font-size: 1rem; }
+        .submit-btn:hover { background: #0f5a7a; }
+        .back-btn {
+            position: fixed; bottom: 20px; left: 20px; background: #ffc107;
+            color: #2c5a7a; border: none; border-radius: 60px; padding: 0.5rem 1rem;
+            cursor: pointer; display: none; z-index: 100;
+            font-weight: bold;
+        }
+        .scroll-top {
+            position: fixed; bottom: 20px; right: 20px; background: #1f6e94;
+            color: white; border: none; border-radius: 60px; width: 45px; height: 45px;
+            font-size: 1.5rem; cursor: pointer; display: none; align-items: center; justify-content: center;
+            z-index: 100;
+        }
+        .exam-item {
+            background: #f0f4fa; border-radius: 1rem; padding: 0.5rem; margin-bottom: 0.5rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+            z-index: 200;
+        }
+        .modal-content { background: white; border-radius: 1rem; padding: 1.5rem; max-width: 90%; width: 500px; max-height: 80vh; overflow-y: auto; }
+        .center { text-align: center; padding: 2rem; color: #888; }
+        .edit-modal input, .edit-modal textarea { width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid #ddd; border-radius: 0.5rem; }
+        .edit-modal button { margin-top: 0.5rem; padding: 0.5rem; border-radius: 0.5rem; border: none; cursor: pointer; }
+        .btn-success { background: #2c9c7c; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .question-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .question-number {
+            font-weight: bold;
+            background: #1f6e94;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        .stats {
+            background: #eef2f8;
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+        .sidebar-title {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #eef2f8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .close-sidebar {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+        }
+        .nav-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="upload-screen" id="uploadScreen">
+        <div class="upload-box" id="uploadBox">
+            <div style="font-size: 3rem;">📂</div>
+            <div style="margin: 0.5rem 0; font-size: 1.1rem;">Tải file Word (.docx)</div>
+            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">
+                📄 Hỗ trợ mọi định dạng câu hỏi trắc nghiệm<br>
+                Câu X: Nội dung... A. Đáp án A B. Đáp án B C. Đáp án C D. Đáp án D
+            </div>
+            <button class="upload-btn" id="selectFileBtn">Chọn file</button>
+            <div class="file-name" id="fileNameDisplay"></div>
+        </div>
+        <input type="file" id="fileInputUpload" accept=".docx">
+    </div>
+
+    <div class="app" id="mainApp">
+        <div class="top-bar">
+            <div class="logo"><h2>📘 Trắc nghiệm Pro</h2></div>
+            <div class="action-group" id="actionGroup">
+                <button class="btn-sm" id="createExamBtn">📌 Tạo bài thi</button>
+                <button class="btn-sm" id="resetAnswersBtn">🔄 Reset đáp án</button>
+                <button class="btn-sm" id="addQuestionBtn">➕ Thêm câu hỏi</button>
+                <button class="btn-sm" id="sortBtn" style="background:#ffc107;">🎯 Kéo thả câu hỏi</button>
+            </div>
+            <div>
+                <button class="btn-sm" id="uploadAgainBtn">📂 Upload lại</button>
+                <input type="file" id="fileInputApp" accept=".docx" style="display: none;">
+            </div>
+        </div>
+        <div class="left-panel" id="leftPanel"></div>
+    </div>
+
+    <div class="right-sidebar" id="rightSidebar">
+        <div class="sidebar-title">
+            <span>📋 Điều hướng câu hỏi</span>
+            <button class="close-sidebar" id="closeSidebarBtn">✕</button>
+        </div>
+        <div id="sidebarContent"></div>
+    </div>
+
+    <button class="menu-btn" id="menuBtn">☰</button>
+    <button class="back-btn" id="backBtn">← Quay về tạo đề</button>
+    <button class="scroll-top" id="scrollTop">↑</button>
+
+    <script>
+        let questions = [], savedExams = [];
+        let currentMode = "teacher";
+        let currentExam = null;
+        let userAnswers = {}, results = [], submitted = false;
+        let currentFilter = "all";
+        let sortableInstance = null;
+        
+        const uploadScreen = document.getElementById('uploadScreen');
+        const mainApp = document.getElementById('mainApp');
+        const uploadBox = document.getElementById('uploadBox');
+        const selectFileBtn = document.getElementById('selectFileBtn');
+        const fileInputUpload = document.getElementById('fileInputUpload');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const leftPanel = document.getElementById('leftPanel');
+        const rightSidebar = document.getElementById('rightSidebar');
+        const menuBtn = document.getElementById('menuBtn');
+        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+        const backBtn = document.getElementById('backBtn');
+        const scrollTop = document.getElementById('scrollTop');
+        const actionGroup = document.getElementById('actionGroup');
+        const sidebarContent = document.getElementById('sidebarContent');
+        const uploadAgainBtn = document.getElementById('uploadAgainBtn');
+        const fileInputApp = document.getElementById('fileInputApp');
+        const createExamBtn = document.getElementById('createExamBtn');
+        const resetAnswersBtn = document.getElementById('resetAnswersBtn');
+        const addQuestionBtn = document.getElementById('addQuestionBtn');
+        const sortBtn = document.getElementById('sortBtn');
+
+        function saveExams() { localStorage.setItem('exams', JSON.stringify(savedExams)); }
+        function loadExams() { const s = localStorage.getItem('exams'); savedExams = s ? JSON.parse(s) : []; }
+        function code() { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
+        function notify(msg) { alert(msg); }
+        function escape(s) { return String(s).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[m]); }
+
+        // Hàm parse mạnh mẽ - giảm thiểu tối đa lỗi mất đáp án
+        function parseQuestions(txt) {
+            // Chuẩn hóa text
+            let text = txt.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+            
+            // Tách câu hỏi bằng regex linh hoạt
+            let questionPattern = /Câu\s+(\d+)[:：.]\s*([\s\S]*?)(?=\n\s*Câu\s+\d+[:：.]|$)/gi;
+            let matches = [...text.matchAll(questionPattern)];
+            
+            if (matches.length === 0) {
+                // Thử cách tách bằng dòng
+                let lines = text.split('\n');
+                let current = null;
+                let questions_raw = [];
+                
+                for (let line of lines) {
+                    line = line.trim();
+                    if (!line) continue;
+                    
+                    let match = line.match(/^Câu\s+(\d+)[:：.]/i);
+                    if (match) {
+                        if (current) questions_raw.push(current);
+                        current = { num: parseInt(match[1]), content: line };
+                    } else if (current) {
+                        current.content += ' ' + line;
+                    }
+                }
+                if (current) questions_raw.push(current);
+                matches = questions_raw.map(q => ['', q.num.toString(), q.content]);
+            }
+            
+            let res = [];
+            
+            for (let match of matches) {
+                let qNum = parseInt(match[1]);
+                let content = match[2];
+                
+                // Tìm tất cả các đáp án A., B., C., D.
+                let options = [];
+                
+                // Phương pháp 1: Tìm bằng regex với flag g
+                let optRegex = /([A-D])\.\s+([^A-D]*?)(?=\s*[A-D]\.|$)/gi;
+                let optMatch;
+                while ((optMatch = optRegex.exec(content)) !== null) {
+                    let optContent = optMatch[2].trim();
+                    if (optContent) {
+                        options.push({
+                            label: optMatch[1],
+                            content: optContent
+                        });
+                    }
+                }
+                
+                // Phương pháp 2: Nếu chưa đủ 4 đáp án, thử cách tách bằng dấu cách
+                if (options.length < 4) {
+                    let parts = content.split(/\s+[A-D]\.\s+/);
+                    if (parts.length >= 5) {
+                        let letters = ['A', 'B', 'C', 'D'];
+                        options = [];
+                        for (let i = 1; i <= 4 && i < parts.length; i++) {
+                            options.push({
+                                label: letters[i-1],
+                                content: parts[i].trim()
+                            });
+                        }
+                    }
+                }
+                
+                // Phương pháp 3: Tìm bằng cách quét từng ký tự
+                if (options.length < 4) {
+                    let positions = [];
+                    for (let i = 0; i < content.length - 1; i++) {
+                        if (/[A-D]/.test(content[i]) && content[i+1] === '.') {
+                            positions.push({ label: content[i], index: i });
+                        }
+                    }
+                    if (positions.length >= 4) {
+                        options = [];
+                        for (let i = 0; i < positions.length; i++) {
+                            let start = positions[i].index + 2;
+                            let end = (i < positions.length - 1) ? positions[i+1].index : content.length;
+                            let optContent = content.substring(start, end).trim();
+                            if (optContent) {
+                                options.push({
+                                    label: positions[i].label,
+                                    content: optContent
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                if (options.length >= 2) {
+                    // Lấy nội dung câu hỏi
+                    let questionText = content;
+                    let firstOptIndex = content.search(/\s*A\./);
+                    if (firstOptIndex !== -1) {
+                        questionText = content.substring(0, firstOptIndex).trim();
+                    }
+                    questionText = questionText.replace(/^Câu\s+\d+[:：.]\s*/i, '').trim();
+                    
+                    // Đảm bảo có đủ 4 đáp án (nếu thiếu thì thêm đáp án trống)
+                    while (options.length < 4) {
+                        options.push({
+                            label: ['A', 'B', 'C', 'D'][options.length],
+                            content: 'Đáp án ' + ['A', 'B', 'C', 'D'][options.length]
+                        });
+                    }
+                    
+                    res.push({
+                        id: qNum,
+                        text: questionText || `Câu hỏi ${qNum}`,
+                        options: options.slice(0, 4),
+                        correct: null
+                    });
+                }
+            }
+            
+            // Sắp xếp theo số thứ tự
+            res.sort((a, b) => a.id - b.id);
+            
+            // Đánh lại ID liên tục
+            res.forEach((q, i) => q.id = i + 1);
+            
+            console.log(`✅ Đã parse thành công ${res.length} câu hỏi`);
+            return res;
+        }
+
+        async function loadWord(file) {
+            try {
+                let buf = await file.arrayBuffer();
+                let raw = await mammoth.extractRawText({ arrayBuffer: buf });
+                let full = raw.value;
+                
+                let parsed = parseQuestions(full);
+                if (!parsed.length) { 
+                    notify("Không tìm thấy câu hỏi. Vui lòng kiểm tra định dạng file Word.");
+                    return false; 
+                }
+                questions = parsed;
+                renderTeacher();
+                notify(`✅ Đã tải thành công ${parsed.length} câu hỏi`);
+                return true;
+            } catch (error) {
+                console.error(error);
+                notify("Lỗi đọc file: " + error.message);
+                return false;
+            }
+        }
+
+        // Khởi tạo kéo thả
+        function initSortable() {
+            if (sortableInstance) {
+                sortableInstance.destroy();
+            }
+            const container = document.getElementById('questionsContainer');
+            if (container) {
+                sortableInstance = new Sortable(container, {
+                    animation: 150,
+                    handle: '.drag-handle',
+                    ghostClass: 'dragging',
+                    onEnd: function() {
+                        const newOrder = [];
+                        document.querySelectorAll('#questionsContainer .question-card').forEach(el => {
+                            const idx = parseInt(el.dataset.originalIdx);
+                            newOrder.push(questions[idx]);
+                        });
+                        questions = newOrder;
+                        questions.forEach((q, i) => q.id = i + 1);
+                        renderTeacher();
+                        notify("✅ Đã cập nhật thứ tự câu hỏi!");
+                    }
+                });
+            }
+        }
+
+        function editQuestion(index) {
+            const q = questions[index];
+            const modal = document.createElement('div');
+            modal.className = 'modal edit-modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3>✏️ Sửa câu hỏi ${index + 1}</h3>
+                    <div style="margin: 1rem 0;">
+                        <label><strong>Nội dung câu hỏi:</strong></label>
+                        <textarea id="editQText" rows="3">${escape(q.text)}</textarea>
+                        
+                        <label><strong>Đáp án A:</strong></label>
+                        <input type="text" id="editOptA" value="${escape(q.options[0]?.content || '')}">
+                        
+                        <label><strong>Đáp án B:</strong></label>
+                        <input type="text" id="editOptB" value="${escape(q.options[1]?.content || '')}">
+                        
+                        <label><strong>Đáp án C:</strong></label>
+                        <input type="text" id="editOptC" value="${escape(q.options[2]?.content || '')}">
+                        
+                        <label><strong>Đáp án D:</strong></label>
+                        <input type="text" id="editOptD" value="${escape(q.options[3]?.content || '')}">
+                        
+                        <label><strong>Đáp án đúng:</strong></label>
+                        <select id="editCorrect">
+                            <option value="">-- Chọn đáp án --</option>
+                            <option value="A" ${q.correct === 'A' ? 'selected' : ''}>A</option>
+                            <option value="B" ${q.correct === 'B' ? 'selected' : ''}>B</option>
+                            <option value="C" ${q.correct === 'C' ? 'selected' : ''}>C</option>
+                            <option value="D" ${q.correct === 'D' ? 'selected' : ''}>D</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button id="cancelEdit" style="background: #ccc;">Hủy</button>
+                        <button id="saveEdit" class="btn-success">Lưu</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            document.getElementById('cancelEdit').onclick = () => modal.remove();
+            document.getElementById('saveEdit').onclick = () => {
+                q.text = document.getElementById('editQText').value;
+                q.options = [
+                    { label: 'A', content: document.getElementById('editOptA').value },
+                    { label: 'B', content: document.getElementById('editOptB').value },
+                    { label: 'C', content: document.getElementById('editOptC').value },
+                    { label: 'D', content: document.getElementById('editOptD').value }
+                ];
+                q.correct = document.getElementById('editCorrect').value || null;
+                modal.remove();
+                renderTeacher();
+                notify("Đã cập nhật câu hỏi!");
+            };
+        }
+
+        function showDeleteModal() {
+            if (!savedExams.length) { alert("Không có đề nào để xóa"); return; }
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            let html = `<div class="modal-content">
+                            <h3>🗑 Xóa bài thi</h3>
+                            <div style="max-height: 300px; overflow-y: auto; margin: 1rem 0;">`;
+            savedExams.forEach(ex => {
+                html += `<label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <input type="checkbox" class="del-cb" data-id="${ex.id}">
+                            <b>${escape(ex.name)}</b> (${ex.code} - ${ex.questions.length} câu)
+                        </label>`;
+            });
+            html += `</div>
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button id="cancelDel" style="padding: 0.3rem 0.8rem;">Hủy</button>
+                        <button id="delSelected" style="background:#dc3545; color:white; padding: 0.3rem 0.8rem;">Xóa đã chọn</button>
+                        <button id="delAll" style="background:#dc3545; color:white; padding: 0.3rem 0.8rem;">Xóa tất cả</button>
+                    </div>
+                </div>`;
+            modal.innerHTML = html;
+            document.body.appendChild(modal);
+            
+            document.getElementById('cancelDel').onclick = () => modal.remove();
+            document.getElementById('delAll').onclick = () => {
+                if (confirm("Xóa TẤT CẢ?")) { 
+                    savedExams = []; 
+                    saveExams(); 
+                    renderTeacher(); 
+                    modal.remove(); 
+                    notify("Đã xóa tất cả"); 
+                }
+            };
+            document.getElementById('delSelected').onclick = () => {
+                let ids = [...modal.querySelectorAll('.del-cb:checked')].map(cb => parseInt(cb.dataset.id));
+                if (!ids.length) { alert("Chưa chọn đề nào"); return; }
+                if (confirm(`Xóa ${ids.length} đề đã chọn?`)) {
+                    savedExams = savedExams.filter(e => !ids.includes(e.id));
+                    saveExams();
+                    renderTeacher();
+                    modal.remove();
+                    notify(`Đã xóa ${ids.length} đề`);
+                }
+            };
+        }
+
+        function exportExam(exam) {
+            try {
+                const examData = {
+                    name: exam.name,
+                    code: exam.code,
+                    questions: exam.questions
+                };
+                
+                const html = generateExportHTML(examData);
+                const blob = new Blob([html], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${exam.name.replace(/[^a-z0-9]/gi, '_')}.html`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                notify(`✅ Đã xuất file: ${exam.name}.html`);
+            } catch (error) {
+                console.error(error);
+                notify("Lỗi xuất file: " + error.message);
+            }
+        }
+
+        function generateExportHTML(examData) {
+            return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${examData.name} - Trắc nghiệm</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; text-align: center; }
+        .header h1 { color: #333; }
+        .question-card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .question-card.correct { border-left: 5px solid #4caf50; background: #f1f8f4; }
+        .question-card.wrong { border-left: 5px solid #f44336; background: #fff5f5; }
+        .question-text { font-size: 18px; font-weight: 600; margin-bottom: 15px; }
+        .options { display: flex; flex-direction: column; gap: 10px; }
+        .option { display: flex; align-items: center; gap: 12px; padding: 10px 15px; border: 2px solid #e0e0e0; border-radius: 12px; cursor: pointer; transition: all 0.2s; }
+        .option:hover { background: #f5f5f5; transform: translateX(5px); }
+        .option.selected { background: #2196f3; border-color: #2196f3; color: white; }
+        .option.selected .letter { background: white; color: #2196f3; }
+        .option.correct-highlight { background: #c8e6d9; border-color: #4caf50; }
+        .letter { font-weight: bold; font-size: 18px; min-width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; border-radius: 50%; }
+        .content { flex: 1; }
+        .submit-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px; border-radius: 50px; font-size: 18px; cursor: pointer; width: 100%; margin: 20px 0; }
+        .result { background: white; border-radius: 15px; padding: 20px; margin-top: 20px; text-align: center; }
+        .score { font-size: 48px; font-weight: bold; color: #667eea; }
+        .menu-btn { position: fixed; left: 20px; top: 50%; transform: translateY(-50%); background: #667eea; color: white; border: none; border-radius: 60px; width: 48px; height: 48px; font-size: 1.5rem; cursor: pointer; z-index: 100; }
+        .nav-sidebar { position: fixed; top: 0; right: 0; height: 100%; width: 380px; background: white; box-shadow: -4px 0 20px rgba(0,0,0,0.1); transform: translateX(100%); transition: transform 0.3s; z-index: 99; padding: 1rem; overflow-y: auto; }
+        .nav-sidebar.open { transform: translateX(0); }
+        .nav-circles { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 1rem 0; max-height: 400px; overflow-y: auto; }
+        .nav-circle { width: 40px; height: 40px; border-radius: 50%; background: #eef2f8; border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; }
+        .nav-circle.answered { background: #4caf50; color: white; }
+        .nav-circle.result-correct { background: #4caf50; color: white; }
+        .nav-circle.result-wrong { background: #f44336; color: white; }
+        .filter-buttons { display: flex; gap: 10px; justify-content: center; margin: 20px 0; flex-wrap: wrap; }
+        .filter-btn { padding: 8px 20px; border: none; border-radius: 25px; cursor: pointer; background: #e0e0e0; }
+        .filter-btn.active { background: #667eea; color: white; }
+        .hidden { display: none; }
+        .close-sidebar { position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+        @media (max-width: 768px) { .nav-sidebar { width: 100%; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 ${examData.name}</h1>
+            <div>Mã đề: ${examData.code}</div>
+        </div>
+        <div id="questionsContainer"></div>
+    </div>
+    <div class="nav-sidebar" id="navSidebar">
+        <button class="close-sidebar" id="closeSidebar">✕</button>
+        <h3 style="margin-bottom: 10px;">📑 Điều hướng</h3>
+        <div id="navCircles" class="nav-circles"></div>
+        <div id="filterContainer" class="filter-buttons"></div>
+    </div>
+    <button class="menu-btn" id="menuBtn">☰</button>
+    <script>
+        const examData = ${JSON.stringify(examData)};
+        let userAnswers = {}, submitted = false, results = [], currentFilter = "all";
+        
+        function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' })[m]); }
+        
+        function render() {
+            let html = '';
+            examData.questions.forEach((q, idx) => {
+                let optsHtml = '';
+                q.options.forEach(opt => {
+                    optsHtml += \`<div class="option" data-idx="\${idx}" data-letter="\${opt.label}"><div class="letter">\${opt.label}</div><div class="content">\${escapeHtml(opt.content)}</div></div>\`;
+                });
+                html += \`<div class="question-card" id="card_\${idx}"><div class="question-text">Câu \${idx+1}: \${escapeHtml(q.text)}</div><div class="options">\${optsHtml}</div></div>\`;
+            });
+            html += '<button class="submit-btn" id="submitBtn">✅ NỘP BÀI</button>';
+            document.getElementById('questionsContainer').innerHTML = html;
+            
+            document.querySelectorAll('.option').forEach(opt => {
+                opt.onclick = function() { if (submitted) return; let idx = parseInt(this.dataset.idx), letter = this.dataset.letter; userAnswers[idx] = letter; document.querySelectorAll('#card_'+idx+' .option').forEach(o => o.classList.remove('selected')); this.classList.add('selected'); updateNav(); };
+            });
+            document.getElementById('submitBtn').onclick = grade;
+            updateNav();
+        }
+        
+        function grade() {
+            if (submitted) return;
+            submitted = true;
+            let correct = 0;
+            results = [];
+            examData.questions.forEach((q, idx) => {
+                let isCorrect = (q.correct && userAnswers[idx] === q.correct);
+                if (isCorrect) correct++;
+                results.push({ isCorrect });
+                let card = document.getElementById('card_'+idx);
+                if (card) {
+                    card.classList.add(isCorrect ? 'correct' : 'wrong');
+                    if (q.correct) {
+                        let correctOpt = card.querySelector(\`.option[data-letter="\${q.correct}"]\`);
+                        if (correctOpt) correctOpt.classList.add('correct-highlight');
+                    }
+                }
+            });
+            let score = (correct / examData.questions.length) * 10;
+            document.getElementById('questionsContainer').innerHTML += \`<div class="result"><div class="score">\${score.toFixed(1)}/10</div><div>✅ Đúng: \${correct}/\${examData.questions.length}</div><button onclick="location.reload()" style="margin-top:15px; padding:10px 30px; background:#ff9800; border:none; border-radius:25px; cursor:pointer;">🔄 Làm lại</button></div>\`;
+            document.getElementById('submitBtn')?.remove();
+            updateNav(true);
+            let wrong = examData.questions.length - correct;
+            document.getElementById('filterContainer').innerHTML = \`<button class="filter-btn active" data-filter="all">📋 Tất cả</button><button class="filter-btn" data-filter="correct">✅ Đúng (\${correct})</button><button class="filter-btn" data-filter="wrong">❌ Sai (\${wrong})</button>\`;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.onclick = function() {
+                    currentFilter = this.dataset.filter;
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    document.querySelectorAll('.question-card').forEach((card, idx) => {
+                        if (currentFilter === 'all') card.classList.remove('hidden');
+                        else if (currentFilter === 'correct') results[idx].isCorrect ? card.classList.remove('hidden') : card.classList.add('hidden');
+                        else !results[idx].isCorrect ? card.classList.remove('hidden') : card.classList.add('hidden');
+                    });
+                };
+            });
+        }
+        
+        function updateNav(isResult = false) {
+            let navHtml = '';
+            examData.questions.forEach((q, idx) => {
+                let status = '';
+                if (isResult) status = results[idx].isCorrect ? 'result-correct' : 'result-wrong';
+                else status = userAnswers[idx] ? 'answered' : '';
+                navHtml += \`<div class="nav-circle \${status}" data-idx="\${idx}">\${idx+1}</div>\`;
+            });
+            document.getElementById('navCircles').innerHTML = navHtml;
+            document.querySelectorAll('.nav-circle').forEach(circle => {
+                circle.onclick = () => { document.getElementById('card_' + circle.dataset.idx).scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+            });
+        }
+        
+        document.getElementById('menuBtn').onclick = () => document.getElementById('navSidebar').classList.toggle('open');
+        document.getElementById('closeSidebar').onclick = () => document.getElementById('navSidebar').classList.remove('open');
+        render();
+    <\/script>
+</body>
+</html>`;
+        }
+
+        function startDoingExam(exam) {
+            currentMode = "doing";
+            currentExam = exam;
+            userAnswers = {};
+            results = [];
+            submitted = false;
+            currentFilter = "all";
+            actionGroup.style.display = "none";
+            backBtn.style.display = "block";
+            
+            function updateNav() {
+                let h = '';
+                exam.questions.forEach((q, i) => {
+                    h += `<div class="nav-circle ${userAnswers[i] ? 'answered' : ''}" data-i="${i}">${q.id}</div>`;
+                });
+                const navCircles = document.getElementById('navCirclesDoing');
+                if (navCircles) {
+                    navCircles.innerHTML = h;
+                    document.querySelectorAll('#navCirclesDoing .nav-circle').forEach(c => {
+                        c.onclick = () => {
+                            const card = document.getElementById(`card_${c.dataset.i}`);
+                            if (card) card.scrollIntoView({ behavior: 'smooth' });
+                        };
+                    });
+                }
+            }
+            
+            function renderUI() {
+                let qh = '';
+                exam.questions.forEach((q, idx) => {
+                    let opts = '';
+                    q.options.forEach(opt => {
+                        const isSelected = userAnswers[idx] === opt.label;
+                        opts += `<div class="option-item ${isSelected ? 'selected' : ''}" data-i="${idx}" data-l="${opt.label}">
+                                    <span class="opt-letter">${opt.label}</span>
+                                    <span>${escape(opt.content)}</span>
+                                </div>`;
+                    });
+                    qh += `<div class="question-card" id="card_${idx}">
+                                <div class="question-text"><b>Câu ${q.id}:</b> ${escape(q.text)}</div>
+                                <div class="options-list">${opts}</div>
+                            </div>`;
+                });
+                leftPanel.innerHTML = qh;
+                sidebarContent.innerHTML = `
+                    <div class="nav-circles" id="navCirclesDoing"></div>
+                    <div class="filter-buttons" id="filterContainerDoing" style="display:none;"></div>
+                    <div id="submitAreaDoing"></div>
+                `;
+                document.getElementById('submitAreaDoing').innerHTML = `<button class="submit-btn" id="submitBtn">✅ Nộp bài</button>`;
+                updateNav();
+                
+                document.querySelectorAll('.option-item').forEach(opt => {
+                    opt.onclick = function(e) {
+                        if (submitted) return;
+                        let i = parseInt(this.dataset.i);
+                        let l = this.dataset.l;
+                        userAnswers[i] = l;
+                        document.querySelectorAll(`#card_${i} .option-item`).forEach(o => o.classList.remove('selected'));
+                        this.classList.add('selected');
+                        updateNav();
+                    };
+                });
+                
+                const submitBtn = document.getElementById('submitBtn');
+                if (submitBtn) submitBtn.onclick = () => gradeExam();
+            }
+            
+            function gradeExam() {
+                if (submitted) return;
+                submitted = true;
+                let correct = 0;
+                results = [];
+                for (let i = 0; i < exam.questions.length; i++) {
+                    let q = exam.questions[i];
+                    let isC = (q.correct && userAnswers[i] === q.correct);
+                    if (isC) correct++;
+                    results.push({ isC, correct: q.correct });
+                    let card = document.getElementById(`card_${i}`);
+                    if (card) {
+                        card.classList.remove('correct-card', 'wrong-card');
+                        if (isC) card.classList.add('correct-card');
+                        else card.classList.add('wrong-card');
+                        if (q.correct) {
+                            let co = card.querySelector(`.option-item[data-l="${q.correct}"]`);
+                            if (co) co.classList.add('correct-active');
+                        }
+                    }
+                }
+                let score = (correct / exam.questions.length) * 10;
+                let wCount = results.filter(r => !r.isC).length;
+                let navH = '';
+                exam.questions.forEach((q, i) => {
+                    navH += `<div class="nav-circle ${results[i].isC ? 'result-correct' : 'result-wrong'}" data-i="${i}">${q.id}</div>`;
+                });
+                const navCircles = document.getElementById('navCirclesDoing');
+                if (navCircles) navCircles.innerHTML = navH;
+                
+                const filterDiv = document.getElementById('filterContainerDoing');
+                if (filterDiv) {
+                    filterDiv.style.display = 'flex';
+                    filterDiv.innerHTML = `<button class="filter-btn ${currentFilter === 'all' ? 'active' : ''}" data-f="all">📋 Tất cả</button>
+                                        <button class="filter-btn ${currentFilter === 'correct' ? 'active' : ''}" data-f="correct">✅ Đúng (${correct})</button>
+                                        <button class="filter-btn ${currentFilter === 'wrong' ? 'active' : ''}" data-f="wrong">❌ Sai (${wCount})</button>`;
+                }
+                
+                const submitArea = document.getElementById('submitAreaDoing');
+                if (submitArea) {
+                    submitArea.innerHTML = `<div style="background:#eef6fc; padding:1rem; text-align:center;">
+                                            <div style="font-size:1.3rem;">🏆 ${score.toFixed(2)}/10</div>
+                                            <div>✅ Đúng ${correct}/${exam.questions.length}</div>
+                                            <button id="retryBtn" style="margin-top:0.5rem; background:#ffc107; border:none; border-radius:60px; padding:0.3rem 1rem; cursor:pointer;">🔄 Làm lại</button>
+                                        </div>`;
+                }
+                
+                const retryBtn = document.getElementById('retryBtn');
+                if (retryBtn) retryBtn.onclick = () => startDoingExam(exam);
+                
+                document.querySelectorAll('#filterContainerDoing .filter-btn').forEach(btn => {
+                    btn.onclick = function() {
+                        currentFilter = this.dataset.f;
+                        document.querySelectorAll('#filterContainerDoing .filter-btn').forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        document.querySelectorAll('.question-card').forEach((card, i) => {
+                            if (currentFilter === 'all') card.classList.remove('hidden');
+                            else if (currentFilter === 'correct') results[i].isC ? card.classList.remove('hidden') : card.classList.add('hidden');
+                            else (!results[i].isC) ? card.classList.remove('hidden') : card.classList.add('hidden');
+                        });
+                    };
+                });
+            }
+            renderUI();
+        }
+
+        function renderTeacher() {
+            currentMode = "teacher";
+            currentExam = null;
+            backBtn.style.display = "none";
+            actionGroup.style.display = "flex";
+            
+            if (!questions.length) { 
+                leftPanel.innerHTML = `<div class="center">
+                    📂 Chưa có câu hỏi. Hãy upload file Word.<br><br>
+                    📄 <strong>Định dạng hỗ trợ:</strong><br>
+                    Câu 1: Nội dung câu hỏi? A. Đáp án A B. Đáp án B C. Đáp án C D. Đáp án D
+                </div>`;
+                sidebarContent.innerHTML = '<div class="center">Chưa có câu hỏi</div>';
+                return;
+            }
+            
+            // Hiển thị điều hướng bên sidebar
+            let navHtml = '<div class="nav-circles" id="navCirclesTeacher">';
+            questions.forEach((q, idx) => {
+                navHtml += `<div class="nav-circle" data-idx="${idx}">${q.id}</div>`;
+            });
+            navHtml += '</div>';
+            navHtml += `<div class="filter-buttons">
+                            <button class="filter-btn active" data-filter="all">📋 Tất cả (${questions.length})</button>
+                            <button class="filter-btn" data-filter="has-answer">✅ Có đáp án (${questions.filter(q => q.correct).length})</button>
+                            <button class="filter-btn" data-filter="no-answer">⚡ Chưa có (${questions.filter(q => !q.correct).length})</button>
+                        </div>`;
+            sidebarContent.innerHTML = navHtml;
+            
+            // Gắn sự kiện cho nav circles
+            setTimeout(() => {
+                document.querySelectorAll('#navCirclesTeacher .nav-circle').forEach(circle => {
+                    circle.onclick = () => {
+                        const idx = parseInt(circle.dataset.idx);
+                        const card = document.getElementById(`q_${idx}`);
+                        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    };
+                });
+                
+                // Filter functionality
+                document.querySelectorAll('#sidebarContent .filter-btn').forEach(btn => {
+                    btn.onclick = function() {
+                        const filter = this.dataset.filter;
+                        document.querySelectorAll('#sidebarContent .filter-btn').forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        document.querySelectorAll('.question-card').forEach((card, idx) => {
+                            const hasAnswer = questions[idx].correct;
+                            if (filter === 'all') card.classList.remove('hidden');
+                            else if (filter === 'has-answer') hasAnswer ? card.classList.remove('hidden') : card.classList.add('hidden');
+                            else !hasAnswer ? card.classList.remove('hidden') : card.classList.add('hidden');
+                        });
+                    };
+                });
+            }, 100);
+            
+            // Hiển thị danh sách câu hỏi
+            let html = `<div class="stats">
+                            📊 Tổng số câu hỏi: <strong>${questions.length}</strong>
+                            <span style="margin-left: 1rem;">✅ Đã chọn đáp án: <strong>${questions.filter(q => q.correct).length}</strong></span>
+                            <span style="margin-left: 1rem;">⚡ Chưa chọn: <strong>${questions.filter(q => !q.correct).length}</strong></span>
+                        </div>
+                        <div id="questionsContainer">`;
+            questions.forEach((q, idx) => {
+                let opts = '';
+                q.options.forEach(opt => {
+                    opts += `<div class="option-item ${q.correct === opt.label ? 'correct-active' : ''}" data-idx="${idx}" data-letter="${opt.label}">
+                                <span class="opt-letter">${opt.label}</span><span>${escape(opt.content)}</span>
+                            </div>`;
+                });
+                html += `<div class="question-card" data-original-idx="${idx}" id="q_${idx}">
+                            <div class="question-header">
+                                <span class="drag-handle">⋮⋮</span>
+                                <span class="question-number">Câu ${q.id}</span>
+                                <div class="question-text" style="flex:1;">${escape(q.text)}</div>
+                            </div>
+                            <div class="options-list">${opts}</div>
+                            <div style="margin-top:0.5rem; font-size:0.8rem; color:${q.correct ? '#2c9c7c' : '#999'};">${q.correct ? `✅ Đáp án đúng: ${q.correct}` : '⚡ Chưa chọn đáp án'}</div>
+                            <div style="margin-top:0.5rem; display: flex; gap: 0.5rem;">
+                                <button class="btn-sm edit-q" data-idx="${idx}">✏️ Sửa</button>
+                                <button class="btn-sm delete-q" data-idx="${idx}" style="background:#ffe0e0;">🗑 Xóa</button>
+                            </div>
+                        </div>`;
+            });
+            html += `</div>`;
+            leftPanel.innerHTML = html;
+            
+            // Khởi tạo kéo thả
+            initSortable();
+            
+            // Gắn sự kiện cho các đáp án
+            document.querySelectorAll('.option-item').forEach(el => {
+                el.onclick = (e) => {
+                    e.stopPropagation();
+                    let idx = parseInt(el.dataset.idx);
+                    let letter = el.dataset.letter;
+                    if (!isNaN(idx) && letter) { 
+                        questions[idx].correct = letter; 
+                        renderTeacher(); 
+                    }
+                };
+            });
+            
+            // Gắn sự kiện sửa/xóa
+            document.querySelectorAll('.edit-q').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    let idx = parseInt(btn.dataset.idx);
+                    editQuestion(idx);
+                };
+            });
+            
+            document.querySelectorAll('.delete-q').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    if(confirm("Xóa câu hỏi này?")) { 
+                        questions.splice(parseInt(btn.dataset.idx), 1); 
+                        questions.forEach((q,i)=>q.id=i+1); 
+                        renderTeacher(); 
+                    }
+                };
+            });
+            
+            // Hiển thị danh sách đề thi
+            let listHtml = '';
+            savedExams.forEach(ex => {
+                listHtml += `<div class="exam-item">
+                                <div style="flex:1;">
+                                    <b>${escape(ex.name)}</b><br>
+                                    <span style="font-size:0.7rem; color:#666;">${ex.code} (${ex.questions.length} câu)</span>
+                                </div>
+                                <div style="display: flex; gap: 0.3rem;">
+                                    <button class="btn-sm export-exam" data-id="${ex.id}">📥 Xuất</button>
+                                    <button class="btn-sm do-exam" data-id="${ex.id}" style="background:#2c7cb6; color:white;">🎯 Làm</button>
+                                </div>
+                            </div>`;
+            });
+            
+            const examListDiv = document.createElement('div');
+            examListDiv.id = 'examListTemp';
+            examListDiv.innerHTML = listHtml || '<div class="center">📭 Chưa có đề thi nào. Hãy tạo đề mới!</div>';
+            
+            const existingExamList = document.getElementById('examListTemp');
+            if (existingExamList) existingExamList.remove();
+            
+            const sidebarDiv = document.getElementById('sidebarContent');
+            const existingTitle = sidebarDiv.querySelector('.sidebar-title');
+            if (existingTitle) existingTitle.after(examListDiv);
+            else sidebarDiv.appendChild(examListDiv);
+            
+            document.querySelectorAll('.export-exam').forEach(btn => {
+                btn.onclick = () => {
+                    let ex = savedExams.find(e => e.id == btn.dataset.id);
+                    if(ex) exportExam(ex);
+                };
+            });
+            
+            document.querySelectorAll('.do-exam').forEach(btn => {
+                btn.onclick = () => {
+                    let ex = savedExams.find(e => e.id == btn.dataset.id);
+                    if(ex) startDoingExam(ex);
+                };
+            });
+            
+            const deleteExamsBtn = document.getElementById('deleteExamsBtn');
+            if (deleteExamsBtn) deleteExamsBtn.onclick = () => showDeleteModal();
+            else {
+                const delBtn = document.createElement('button');
+                delBtn.id = 'deleteExamsBtn';
+                delBtn.className = 'btn-sm';
+                delBtn.style.cssText = 'margin-top:0.5rem; background:#dc3545; color:white; width:100%;';
+                delBtn.innerHTML = '🗑 Xóa bài thi';
+                delBtn.onclick = () => showDeleteModal();
+                sidebarDiv.appendChild(delBtn);
+            }
+        }
+
+        function initEvents() {
+            selectFileBtn.onclick = (e) => {
+                e.stopPropagation();
+                fileInputUpload.click();
+            };
+            
+            uploadBox.onclick = () => fileInputUpload.click();
+            
+            fileInputUpload.onchange = async (e) => {
+                if (e.target.files.length) {
+                    let file = e.target.files[0];
+                    fileNameDisplay.innerText = file.name;
+                    let ok = await loadWord(file);
+                    if (ok) { 
+                        uploadScreen.style.display = 'none'; 
+                        mainApp.style.display = 'block'; 
+                    }
+                }
+            };
+            
+            uploadAgainBtn.onclick = () => fileInputApp.click();
+            fileInputApp.onchange = async (e) => {
+                if (e.target.files.length) {
+                    let file = e.target.files[0];
+                    await loadWord(file);
+                    notify("Đã tải lại câu hỏi");
+                }
+            };
+            
+            createExamBtn.onclick = () => {
+                if (!questions.length) { 
+                    alert("❌ Chưa có câu hỏi nào! Hãy upload file Word trước."); 
+                    return; 
+                }
+                let miss = questions.some(q => !q.correct);
+                if (miss && !confirm("⚠️ Một số câu chưa có đáp án. Bạn vẫn muốn tạo đề thi?")) return;
+                let name = prompt("📝 Tên đề thi:", `Đề ${new Date().toLocaleDateString()}`);
+                if (!name) return;
+                savedExams.unshift({ id: Date.now(), name, code: code(), questions: JSON.parse(JSON.stringify(questions)) });
+                saveExams();
+                renderTeacher();
+                notify(`✅ Đã tạo đề thi: ${name}`);
+            };
+            
+            resetAnswersBtn.onclick = () => { 
+                if (confirm("🔄 Reset tất cả đáp án đã chọn?")) { 
+                    questions.forEach(q => q.correct = null); 
+                    renderTeacher(); 
+                } 
+            };
+            
+            addQuestionBtn.onclick = () => {
+                questions.push({ 
+                    id: questions.length + 1, 
+                    text: "Câu hỏi mới", 
+                    options: [
+                        { label: "A", content: "Nội dung A" }, 
+                        { label: "B", content: "Nội dung B" }, 
+                        { label: "C", content: "Nội dung C" }, 
+                        { label: "D", content: "Nội dung D" }
+                    ], 
+                    correct: null 
+                });
+                renderTeacher();
+                setTimeout(() => {
+                    const newQ = document.querySelector(`.question-card:last-child`);
+                    if (newQ) newQ.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+                notify("➕ Đã thêm câu hỏi mới");
+            };
+            
+            sortBtn.onclick = () => {
+                notify("🎯 Kéo thả các câu hỏi bằng cách kéo vào biểu tượng ⋮⋮ bên cạnh mỗi câu");
+            };
+            
+            backBtn.onclick = () => renderTeacher();
+            menuBtn.onclick = () => rightSidebar.classList.toggle('open');
+            closeSidebarBtn.onclick = () => rightSidebar.classList.remove('open');
+            
+            leftPanel.onscroll = () => { 
+                if (leftPanel.scrollTop > 200) scrollTop.style.display = 'flex'; 
+                else scrollTop.style.display = 'none'; 
+            };
+            
+            scrollTop.onclick = () => leftPanel.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        loadExams();
+        renderTeacher();
+        initEvents();
+    </script>
+</body>
+</html>
