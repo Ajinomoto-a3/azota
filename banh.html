@@ -1037,6 +1037,21 @@
             .modal-dialog {
                 padding: 24px;
             }
+            .top-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 10px 16px;
+            }
+            .action-group {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            .menu-btn {
+                left: 8px;
+                width: 36px;
+                height: 36px;
+                font-size: 1rem;
+            }
         }
     </style>
 </head>
@@ -1096,7 +1111,7 @@
 
     <!-- Main App -->
     <div class="main-app" id="mainApp">
-        <div class="top-bar">
+        <div class="top-bar" id="topBar">
             <div class="logo">
                 <span class="logo-icon">💡</span>
                 <span class="logo-name">LightQuiz</span>
@@ -1136,285 +1151,102 @@
         let currentFilter = 'all';
         const $ = id => document.getElementById(id);
 
-        // ============ FIREBASE KHỞI TẠO ============
-const firebaseConfig = {
-    apiKey: "AIzaSyDof7yrO0Z9YazsfHtevfid2nFwYB9_03Y",
-    authDomain: "lightquiz-app.firebaseapp.com",
-    databaseURL: "https://lightquiz-app-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "lightquiz-app",
-    storageBucket: "lightquiz-app.firebasestorage.app",
-    messagingSenderId: "610026189000",
-    appId: "1:610026189000:web:d4f417e7ab380d8f3b35fd"
-};
+        // ============ FIREBASE ============
+        const firebaseConfig = {
+            apiKey: "AIzaSyDof7yrO0Z9YazsfHtevfid2nFwYB9_03Y",
+            authDomain: "lightquiz-app.firebaseapp.com",
+            databaseURL: "https://lightquiz-app-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "lightquiz-app",
+            storageBucket: "lightquiz-app.firebasestorage.app",
+            messagingSenderId: "610026189000",
+            appId: "1:610026189000:web:d4f417e7ab380d8f3b35fd"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
+        let currentUser = null;
+        let userExamsRef = null;
 
-// Khởi tạo Firebase App
-firebase.initializeApp(firebaseConfig);
+        // ============ AUTH ============
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                userExamsRef = db.ref('users/' + user.uid + '/exams');
+                document.getElementById('authScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('userBar').style.display = 'flex';
+                document.getElementById('userName').textContent = user.email;
+                document.getElementById('userInitial').textContent = (user.email || 'U')[0].toUpperCase();
+                loadUserExams();
+            } else {
+                currentUser = null;
+                userExamsRef = null;
+                exams = [];
+                document.getElementById('authScreen').style.display = 'flex';
+                document.getElementById('mainApp').style.display = 'none';
+                document.getElementById('userBar').style.display = 'none';
+            }
+        });
 
-// Khởi tạo dịch vụ
-const db = firebase.database();
-const auth = firebase.auth();
-auth.useDeviceLanguage(); // Thông báo lỗi tiếng Việt
-
-let currentUser = null;
-let userExamsRef = null;
-
-// ============ KIỂM TRA TRẠNG THÁI ĐĂNG NHẬP ============
-auth.onAuthStateChanged(user => {
-    console.log('Auth state changed:', user ? `Đã đăng nhập: ${user.email}` : 'Chưa đăng nhập');
-    
-    if (user) {
-        // Người dùng đã đăng nhập
-        currentUser = user;
-        userExamsRef = db.ref('users/' + user.uid + '/exams');
-        
-        // Ẩn màn hình đăng nhập, hiện ứng dụng chính
-        document.getElementById('authScreen').style.display = 'none';
-        document.getElementById('mainApp').style.display = 'block';
-        document.getElementById('userBar').style.display = 'flex';
-        document.getElementById('uploadScreen').style.display = 'none';
-        
-        // Cập nhật thông tin hiển thị
-        document.getElementById('userName').textContent = user.email;
-        document.getElementById('userInitial').textContent = (user.email || 'U')[0].toUpperCase();
-        
-        // Tải đề thi của người dùng
-        loadUserExams();
-    } else {
-        // Không có người dùng đăng nhập
-        currentUser = null;
-        userExamsRef = null;
-        exams = [];
-        
-        // Hiện màn hình đăng nhập, ẩn ứng dụng
-        document.getElementById('authScreen').style.display = 'flex';
-        document.getElementById('mainApp').style.display = 'none';
-        document.getElementById('userBar').style.display = 'none';
-    }
-});
-
-function loadUserExams() {
-    if (!userExamsRef) return;
-    
-    userExamsRef.on('value', snap => {
-        const data = snap.val() || {};
-        exams = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        console.log('Đã tải ' + Object.keys(data).length + ' đề thi');
-        
-        // Chỉ render nếu đang ở chế độ teacher
-        if (currentMode === 'teacher') {
-            renderTeacher();
+        function loadUserExams() {
+            if (!userExamsRef) return;
+            userExamsRef.on('value', snap => {
+                const data = snap.val() || {};
+                exams = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                renderTeacher();
+            });
         }
-    }, error => {
-        console.error('Lỗi tải đề thi:', error);
-        notify('❌ Lỗi tải dữ liệu từ máy chủ');
-    });
-}
 
-// ============ CHUYỂN TAB ĐĂNG NHẬP/ĐĂNG KÝ ============
-function switchTab(tab) {
-    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('loginError').classList.remove('show');
-    document.getElementById('regError').classList.remove('show');
-    
-    if (tab === 'login') {
-        document.getElementById('loginForm').style.display = 'block';
-        document.getElementById('registerForm').style.display = 'none';
-        document.querySelector('.auth-tab:nth-child(1)').classList.add('active');
-    } else {
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('registerForm').style.display = 'block';
-        document.querySelector('.auth-tab:nth-child(2)').classList.add('active');
-    }
-}
-
-// ============ ĐĂNG NHẬP ============
-function login() {
-    const email = document.getElementById('loginEmail').value.trim();
-    const pass = document.getElementById('loginPass').value;
-    const err = document.getElementById('loginError');
-    const btn = document.querySelector('#loginForm .btn-gold');
-    
-    // Reset thông báo lỗi
-    err.classList.remove('show');
-    
-    // Kiểm tra dữ liệu đầu vào
-    if (!email || !pass) { 
-        err.textContent = '❌ Vui lòng nhập đầy đủ email và mật khẩu'; 
-        err.classList.add('show'); 
-        return; 
-    }
-    
-    // Hiển thị trạng thái loading
-    btn.textContent = '⏳ Đang đăng nhập...';
-    btn.disabled = true;
-    
-    console.log('Đang thử đăng nhập:', email);
-    
-    auth.signInWithEmailAndPassword(email, pass)
-        .then((userCredential) => {
-            // Đăng nhập thành công
-            console.log('Đăng nhập thành công!', userCredential.user.email);
-            err.classList.remove('show');
-            // Auth state listener sẽ tự động chuyển màn hình
-        })
-        .catch(e => {
-            console.error('Lỗi đăng nhập:', e.code, e.message);
-            let msg = '❌ ';
-            
-            // Xử lý các mã lỗi cụ thể
-            switch(e.code) {
-                case 'auth/invalid-email':
-                    msg += 'Địa chỉ email không hợp lệ';
-                    break;
-                case 'auth/user-disabled':
-                    msg += 'Tài khoản này đã bị vô hiệu hóa';
-                    break;
-                case 'auth/user-not-found':
-                    msg += 'Không tìm thấy tài khoản với email này';
-                    break;
-                case 'auth/wrong-password':
-                    msg += 'Mật khẩu không chính xác';
-                    break;
-                case 'auth/invalid-credential':
-                    msg += 'Email hoặc mật khẩu không đúng';
-                    break;
-                case 'auth/too-many-requests':
-                    msg += 'Quá nhiều lần thử. Vui lòng đợi vài phút';
-                    break;
-                case 'auth/network-request-failed':
-                    msg += 'Lỗi kết nối mạng. Vui lòng kiểm tra internet';
-                    break;
-                case 'auth/configuration-not-found':
-                    msg += 'Dự án Firebase chưa được cấu hình đúng';
-                    break;
-                default:
-                    msg += 'Lỗi: ' + e.message;
+        function switchTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('loginError').classList.remove('show');
+            document.getElementById('regError').classList.remove('show');
+            if (tab === 'login') {
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('registerForm').style.display = 'none';
+                document.querySelector('.auth-tab:nth-child(1)').classList.add('active');
+            } else {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('registerForm').style.display = 'block';
+                document.querySelector('.auth-tab:nth-child(2)').classList.add('active');
             }
-            
-            err.textContent = msg;
-            err.classList.add('show');
-        })
-        .finally(() => {
-            // Khôi phục nút đăng nhập
-            btn.textContent = '🔑 Đăng Nhập';
-            btn.disabled = false;
-        });
-}
+        }
 
-// ============ ĐĂNG KÝ ============
-function register() {
-    const name = document.getElementById('regName').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const pass = document.getElementById('regPass').value;
-    const confirm = document.getElementById('regConfirm').value;
-    const err = document.getElementById('regError');
-    const btn = document.querySelector('#registerForm .btn-gold');
-    
-    // Reset thông báo lỗi
-    err.classList.remove('show');
-    
-    // Kiểm tra dữ liệu đầu vào
-    if (!email || !pass) {
-        err.textContent = '❌ Vui lòng nhập đầy đủ email và mật khẩu';
-        err.classList.add('show');
-        return;
-    }
-    if (pass.length < 6) {
-        err.textContent = '❌ Mật khẩu phải có ít nhất 6 ký tự';
-        err.classList.add('show');
-        return;
-    }
-    if (pass !== confirm) {
-        err.textContent = '❌ Mật khẩu xác nhận không khớp';
-        err.classList.add('show');
-        return;
-    }
-    
-    // Hiển thị trạng thái loading
-    btn.textContent = '⏳ Đang đăng ký...';
-    btn.disabled = true;
-    
-    console.log('Đang thử đăng ký:', email);
-    
-    auth.createUserWithEmailAndPassword(email, pass)
-        .then((userCredential) => {
-            // Đăng ký thành công
-            console.log('Đăng ký thành công!', userCredential.user.email);
-            
-            // Lưu profile nếu có tên
-            if (name && userCredential.user) {
-                db.ref('users/' + userCredential.user.uid + '/profile').set({
-                    name: name,
-                    email: email,
-                    createdAt: firebase.database.ServerValue.TIMESTAMP
-                });
-            }
-            
-            // Chuyển sang tab đăng nhập
-            switchTab('login');
-            document.getElementById('loginEmail').value = email;
-            notify('✅ Đăng ký thành công! Hãy đăng nhập');
-        })
-        .catch(e => {
-            console.error('Lỗi đăng ký:', e.code, e.message);
-            let msg = '❌ ';
-            
-            // Xử lý các mã lỗi cụ thể
-            switch(e.code) {
-                case 'auth/email-already-in-use':
-                    msg += 'Email này đã được sử dụng';
-                    break;
-                case 'auth/invalid-email':
-                    msg += 'Địa chỉ email không hợp lệ';
-                    break;
-                case 'auth/operation-not-allowed':
-                    msg += 'Tính năng đăng ký đang bị vô hiệu hóa';
-                    break;
-                case 'auth/weak-password':
-                    msg += 'Mật khẩu quá yếu, hãy chọn mật khẩu khác';
-                    break;
-                case 'auth/network-request-failed':
-                    msg += 'Lỗi kết nối mạng. Vui lòng kiểm tra internet';
-                    break;
-                case 'auth/configuration-not-found':
-                    msg += 'Dự án Firebase chưa được cấu hình đúng';
-                    break;
-                default:
-                    msg += 'Lỗi: ' + e.message;
-            }
-            
-            err.textContent = msg;
-            err.classList.add('show');
-        })
-        .finally(() => {
-            // Khôi phục nút đăng ký
-            btn.textContent = '📝 Đăng Ký';
-            btn.disabled = false;
-        });
-}
+        function login() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            const err = document.getElementById('loginError');
+            if (!email || !pass) { err.textContent = '❌ Nhập đầy đủ email và mật khẩu'; err.classList.add('show'); return; }
+            auth.signInWithEmailAndPassword(email, pass)
+                .catch(e => { err.textContent = '❌ Sai email hoặc mật khẩu'; err.classList.add('show'); });
+        }
 
-// ============ ĐĂNG XUẤT ============
-function logout() {
-    if (confirm('🚪 Bạn có chắc muốn đăng xuất?')) {
-        auth.signOut().then(() => {
-            console.log('Đã đăng xuất');
-            // Auth state listener sẽ tự động chuyển màn hình
-        }).catch(e => {
-            console.error('Lỗi đăng xuất:', e);
-            notify('❌ Lỗi đăng xuất');
-        });
-    }
-}
+        function register() {
+            const name = document.getElementById('regName').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const pass = document.getElementById('regPass').value;
+            const confirm = document.getElementById('regConfirm').value;
+            const err = document.getElementById('regError');
+            if (!email || !pass) { err.textContent = '❌ Nhập đầy đủ email và mật khẩu'; err.classList.add('show'); return; }
+            if (pass.length < 6) { err.textContent = '❌ Mật khẩu ít nhất 6 ký tự'; err.classList.add('show'); return; }
+            if (pass !== confirm) { err.textContent = '❌ Mật khẩu không khớp'; err.classList.add('show'); return; }
+            auth.createUserWithEmailAndPassword(email, pass)
+                .then(() => {
+                    if (name) db.ref('users/' + auth.currentUser.uid + '/profile').set({ name, email });
+                    switchTab('login');
+                    document.getElementById('loginEmail').value = email;
+                })
+                .catch(e => { err.textContent = '❌ ' + (e.code === 'auth/email-already-in-use' ? 'Email đã được đăng ký' : 'Lỗi: ' + e.message); err.classList.add('show'); });
+        }
 
-// ============ LƯU DỮ LIỆU ============
-function save() {
-    if (userExamsRef) {
-        userExamsRef.set(exams).catch(e => {
-            console.error('Lỗi lưu dữ liệu:', e);
-            notify('❌ Lỗi lưu dữ liệu');
-        });
-    }
-}
+        function logout() {
+            if (confirm('🚪 Đăng xuất?')) auth.signOut();
+        }
+
+        function save() {
+            if (userExamsRef) userExamsRef.set(exams);
+        }
+
         // ============ ĐẾM LƯỢT TRUY CẬP ============
         function countVisit() {
             const visitRef = db.ref('stats/visits');
@@ -1453,6 +1285,32 @@ function save() {
             $('loading').classList.add('show'); }
 
         function hideLoading() { $('loading').classList.remove('show'); }
+
+        // ============ DETECT MOBILE ============
+        function isMobile() {
+            return window.innerWidth <= 768;
+        }
+
+        // ============ UPDATE UI FOR MODE ============
+        function updateUIVisibility() {
+            const menuBtn = $('menuBtn');
+            const actions = $('actions');
+            
+            if (currentMode === 'doing') {
+                // Đang làm bài: ẩn menu và action bar
+                menuBtn.style.display = 'none';
+                actions.style.display = 'none';
+                // Ẩn luôn top bar trên mobile
+                if (isMobile()) {
+                    $('topBar').style.display = 'none';
+                }
+            } else {
+                // Chế độ teacher: hiện menu và action bar
+                menuBtn.style.display = 'flex';
+                actions.style.display = 'flex';
+                $('topBar').style.display = 'flex';
+            }
+        }
 
         // ============ MODAL HELPER ============
         function showModal(title, icon, content, buttons, dangerClass = '') {
@@ -1737,6 +1595,7 @@ function save() {
             results = [];
             $('actions').style.display = 'flex';
             updateStats();
+            updateUIVisibility();
 
             let sideHtml = '<h3 style="margin-bottom:12px;color:var(--text)">📋 Đề thi</h3>';
             if (exams.length) {
@@ -1946,7 +1805,7 @@ rnd();
             results = [];
             currentFilter = 'all';
 
-            $('actions').style.display = 'none';
+            updateUIVisibility();
 
             $('sidebarContent').innerHTML = `
         <h3 style="margin-bottom:12px;color:var(--text)">📑 Điều hướng</h3>
@@ -1988,7 +1847,7 @@ rnd();
 
             html += `<div id="resultArea"></div>`;
             html += `<div style="text-align:center;margin-top:12px">
-        <button class="btn btn-outline btn-sm" onclick="backToTeacher()">← Quay về</button>
+        <button class="btn btn-outline btn-sm" onclick="backToTeacher()" style="display:none" id="backToTeacherBtn">← Quay về</button>
     </div>`;
 
             $('panel').innerHTML = html;
@@ -2000,6 +1859,9 @@ rnd();
                 sb.onclick = submitExam; }
             $('submitArea').innerHTML = '';
             $('filterBtns').innerHTML = '';
+            // Ẩn nút quay về khi chưa nộp bài
+            const backBtn = $('backToTeacherBtn');
+            if (backBtn) backBtn.style.display = 'none';
         }
 
         function selectOption(i, label) {
@@ -2088,6 +1950,26 @@ rnd();
                 const nav = $('nav_' + i);
                 if (nav) nav.onclick = () => scrollToQ(i);
             });
+
+            // Hiện nút quay về
+            const backBtn = $('backToTeacherBtn');
+            if (backBtn) {
+                backBtn.style.display = 'inline-block';
+                backBtn.style.marginTop = '20px';
+                backBtn.style.padding = '12px 28px';
+                backBtn.style.fontSize = '1rem';
+                backBtn.style.fontWeight = '700';
+                backBtn.style.borderColor = 'rgba(253,203,110,0.5)';
+                backBtn.style.color = '#fdcb6e';
+                backBtn.style.background = 'rgba(253,203,110,0.15)';
+                backBtn.style.width = '100%';
+                backBtn.style.maxWidth = '300px';
+            }
+
+            // Hiện lại top bar trên mobile sau khi nộp bài
+            if (isMobile()) {
+                $('topBar').style.display = 'flex';
+            }
         }
 
         function filterCards(type) {
@@ -2124,6 +2006,12 @@ rnd();
                 sb.onclick = submitExam; }
             const resultCard = $('resultCard');
             if (resultCard) resultCard.remove();
+            // Ẩn lại nút quay về và top bar trên mobile
+            const backBtn = $('backToTeacherBtn');
+            if (backBtn) backBtn.style.display = 'none';
+            if (isMobile()) {
+                $('topBar').style.display = 'none';
+            }
         }
 
         function backToTeacher() {
@@ -2133,6 +2021,7 @@ rnd();
             submitted = false;
             results = [];
             renderTeacher();
+            $('sidebar').classList.remove('open');
         }
 
         // ============ KEYBOARD SHORTCUT ============
@@ -2145,6 +2034,11 @@ rnd();
                 $('sidebar').classList.remove('open');
                 document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
             }
+        });
+
+        // ============ RESIZE HANDLER ============
+        window.addEventListener('resize', function() {
+            updateUIVisibility();
         });
 
         // ============ INIT ============
