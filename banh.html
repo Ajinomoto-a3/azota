@@ -4,2082 +4,632 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LightQuiz</title>
-    <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js">
-    </script>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js">
-    </script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js">
-    </script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js">
-    </script>
+    <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <style>
         :root {
-            --bg: #0f0f1e;
-            --surface: rgba(255, 255, 255, 0.04);
-            --border: rgba(255, 255, 255, 0.08);
-            --text: #e2e8f0;
-            --text2: #94a3b8;
-            --purple: #6c5ce7;
-            --purple2: #a29bfe;
-            --green: #00b894;
-            --red: #ff6b6b;
-            --yellow: #fdcb6e;
-            --yellow2: #f39c12;
-            --radius: 18px;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box
-        }
-
-        html {
-            scroll-behavior: smooth
-        }
-
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background: linear-gradient(135deg, #0f0f1e, #1a1a2e);
-            color: var(--text);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(ellipse at 30% 50%, rgba(108, 92, 231, 0.1) 0%, transparent 50%),
-                radial-gradient(ellipse at 70% 30%, rgba(253, 203, 110, 0.06) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .upload-screen {
-            position: fixed;
-            inset: 0;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .upload-box {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
-            padding: 40px;
-            text-align: center;
-            max-width: 480px;
-            width: 100%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-            transition: transform .25s, box-shadow .25s;
-        }
-
-        .upload-box:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 30px 80px rgba(253, 203, 110, 0.2)
-        }
-
-        .upload-box.drag-over {
-            border-color: var(--yellow);
-            background: rgba(253, 203, 110, 0.08)
-        }
-
-        .upload-icon {
-            font-size: 4rem;
-            margin-bottom: 16px;
-            display: inline-block;
-            animation: bulbGlow 2s ease-in-out infinite;
-        }
-
-        @keyframes bulbGlow {
-            0%,
-            100% {
-                text-shadow: 0 0 20px rgba(253, 203, 110, 0.3), 0 0 40px rgba(253, 203, 110, 0.1);
-                transform: scale(1);
-            }
-            50% {
-                text-shadow: 0 0 40px rgba(253, 203, 110, 0.8), 0 0 80px rgba(253, 203, 110, 0.4), 0 0 120px rgba(253, 203, 110, 0.2);
-                transform: scale(1.08);
-            }
-        }
-
-        .logo-text {
-            display: inline-block;
-            background: linear-gradient(135deg, #fdcb6e, #f39c12, #fdcb6e);
-            background-size: 200% 200%;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: shimmer 2s ease-in-out infinite, glowPulse 2s ease-in-out infinite;
-        }
-
-        @keyframes shimmer {
-            0%,
-            100% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-        }
-
-        @keyframes glowPulse {
-            0%,
-            100% {
-                filter: drop-shadow(0 0 8px rgba(253, 203, 110, 0.4));
-            }
-            50% {
-                filter: drop-shadow(0 0 20px rgba(253, 203, 110, 0.9));
-            }
-        }
-
-        .upload-title {
-            font-size: 1.8rem;
-            font-weight: 800;
-            margin-bottom: 4px;
-        }
-
-        .upload-subtitle {
-            color: var(--text2);
-            font-size: .9rem;
-            margin: 12px 0 24px
-        }
-
-        .btn {
-            border: none;
-            padding: 12px 28px;
-            border-radius: 50px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all .15s;
-            font-size: .9rem;
-        }
-
-        .btn:active {
-            transform: scale(.96)
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #fdcb6e, #f39c12);
-            color: #1a1a2e;
-            box-shadow: 0 4px 20px rgba(253, 203, 110, 0.3);
-        }
-
-        .btn-primary:hover {
-            box-shadow: 0 8px 30px rgba(253, 203, 110, 0.5);
-            transform: translateY(-2px)
-        }
-
-        .btn-outline {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text);
-        }
-
-        .btn-outline:hover {
-            background: rgba(255, 255, 255, 0.1)
-        }
-
-        .btn-sm {
-            padding: 6px 14px;
-            font-size: .75rem
-        }
-
-        .btn-gold {
-            background: linear-gradient(135deg, #fdcb6e, #f39c12, #fdcb6e);
-            background-size: 200% 200%;
-            color: #1a1a2e;
-            border: none;
-            padding: 12px 28px;
-            border-radius: 50px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: .9rem;
-            animation: goldShimmer 2s ease-in-out infinite;
-            box-shadow: 0 4px 20px rgba(253, 203, 110, 0.4);
-        }
-
-        .btn-gold:hover {
-            box-shadow: 0 8px 35px rgba(253, 203, 110, 0.7);
-            transform: translateY(-2px);
-        }
-
-        .btn-gold:active {
-            transform: scale(0.96);
-        }
-
-        @keyframes goldShimmer {
-            0%,
-            100% {
-                background-position: 0% 50%;
-                box-shadow: 0 4px 20px rgba(253, 203, 110, 0.4);
-            }
-            50% {
-                background-position: 100% 50%;
-                box-shadow: 0 8px 40px rgba(253, 203, 110, 0.8);
-            }
-        }
-
-        .file-name {
-            margin-top: 16px;
-            color: var(--yellow);
-            font-weight: 600;
-            font-size: .85rem
-        }
-
-        #fileInput,
-        #fileInput2 {
-            display: none
-        }
-
-        .loading-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 15, 30, 0.9);
-            backdrop-filter: blur(10px);
-            z-index: 200;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .loading-overlay.show {
-            display: flex
-        }
-
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top-color: var(--yellow);
-            border-radius: 50%;
-            animation: spin .7s linear infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg)
-            }
-        }
-
-        .loading-text {
-            font-weight: 600;
-            color: var(--text)
-        }
-
-        .main-app {
-            display: none;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            position: relative;
-            z-index: 1
-        }
-
-        .top-bar {
-            background: var(--surface);
-            backdrop-filter: blur(30px);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 12px 20px;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            margin-bottom: 16px;
-            position: sticky;
-            top: 16px;
-            z-index: 50;
-        }
-
-        .logo {
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .logo-icon {
-            font-size: 1.5rem;
-            display: inline-block;
-            animation: bulbGlow 2s ease-in-out infinite;
-        }
-
-        .logo-name {
-            font-size: 1.2rem;
-            display: inline-block;
-            background: linear-gradient(135deg, #fdcb6e, #f39c12, #fdcb6e);
-            background-size: 200% 200%;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: shimmer 2s ease-in-out infinite, glowPulse 2s ease-in-out infinite;
-        }
-
-        .stats {
-            background: rgba(253, 203, 110, 0.15);
-            color: var(--yellow);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: .75rem;
-            font-weight: 600;
-        }
-
-        .action-group {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap
-        }
-
-        .left-panel {
-            background: rgba(255, 255, 255, 0.02);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 20px;
-            max-height: 75vh;
-            overflow-y: auto;
-            scroll-behavior: smooth;
-        }
-
-        .left-panel::-webkit-scrollbar {
-            width: 4px
-        }
-
-        .left-panel::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 10px
-        }
-
-        .q-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 12px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            animation: fadeSlideIn 0.4s ease-out;
-        }
-
-        @keyframes fadeSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .q-card:hover {
-            border-color: rgba(255, 255, 255, 0.12)
-        }
-
-        .q-card.hidden {
-            display: none
-        }
-
-        .q-card.correct-card {
-            border-left: 3px solid var(--green);
-            background: rgba(0, 184, 148, 0.05);
-            animation: correctPulse 0.6s ease-out;
-        }
-
-        @keyframes correctPulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(0, 184, 148, 0.4);
-            }
-            70% {
-                box-shadow: 0 0 0 15px rgba(0, 184, 148, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(0, 184, 148, 0);
-            }
-        }
-
-        .q-card.wrong-card {
-            border-left: 3px solid var(--red);
-            background: rgba(255, 107, 107, 0.05);
-            animation: wrongShake 0.5s ease-out;
-        }
-
-        @keyframes wrongShake {
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-            20% {
-                transform: translateX(-8px);
-            }
-            40% {
-                transform: translateX(8px);
-            }
-            60% {
-                transform: translateX(-4px);
-            }
-            80% {
-                transform: translateX(4px);
-            }
-        }
-
-        .q-text {
-            font-weight: 700;
-            margin-bottom: 12px;
-            line-height: 1.6;
-            white-space: pre-wrap
-        }
-
-        .options {
-            display: flex;
-            flex-direction: column;
-            gap: 6px
-        }
-
-        .opt {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 16px;
-            border-radius: 50px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .opt:hover {
-            background: rgba(255, 255, 255, 0.06);
-            transform: translateX(4px);
-        }
-
-        .opt:active {
-            transform: scale(0.98);
-        }
-
-        .opt-letter {
-            font-weight: 800;
-            width: 32px;
-            height: 32px;
-            background: rgba(253, 203, 110, 0.2);
-            color: var(--yellow);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: all 0.3s ease;
-        }
-
-        .opt.correct-answer {
-            background: rgba(0, 184, 148, 0.15);
-            border-color: rgba(0, 184, 148, 0.3);
-            animation: highlightCorrect 0.5s ease-out;
-        }
-
-        @keyframes highlightCorrect {
-            0% {
-                background: rgba(0, 184, 148, 0.4);
-            }
-            100% {
-                background: rgba(0, 184, 148, 0.15);
-            }
-        }
-
-        .opt.correct-answer .opt-letter {
-            background: var(--green);
-            color: #fff;
-            animation: popIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-
-        @keyframes popIn {
-            0% {
-                transform: scale(0);
-            }
-            80% {
-                transform: scale(1.2);
-            }
-            100% {
-                transform: scale(1);
-            }
-        }
-
-        .opt.selected-answer {
-            background: rgba(253, 203, 110, 0.25);
-            border-color: rgba(253, 203, 110, 0.5);
-            animation: selectGlow 0.3s ease-out;
-        }
-
-        @keyframes selectGlow {
-            0% {
-                box-shadow: 0 0 0 0 rgba(253, 203, 110, 0.4);
-            }
-            100% {
-                box-shadow: 0 0 20px 5px rgba(253, 203, 110, 0);
-            }
-        }
-
-        .opt.selected-answer .opt-letter {
-            background: #fff;
-            color: #1a1a2e;
-            animation: popIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-
-        .answer-badge {
-            display: inline-block;
-            margin-top: 8px;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: .75rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .answer-badge.set {
-            background: rgba(0, 184, 148, 0.15);
-            color: #55efc4
-        }
-
-        .answer-badge.unset {
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text2)
-        }
-
-        .sidebar {
-            position: fixed;
-            top: 0;
-            right: 0;
-            width: 380px;
-            height: 100%;
-            background: rgba(15, 15, 30, 0.95);
-            backdrop-filter: blur(30px);
-            border-left: 1px solid var(--border);
-            z-index: 99;
-            transform: translateX(100%);
-            transition: transform .25s;
-            padding: 20px;
-            overflow-y: auto;
-            scroll-behavior: smooth;
-        }
-
-        .sidebar.open {
-            transform: translateX(0)
-        }
-
-        .menu-btn {
-            position: fixed;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 44px;
-            height: 44px;
-            border-radius: 14px;
-            background: rgba(253, 203, 110, 0.2);
-            border: 1px solid rgba(253, 203, 110, 0.3);
-            color: var(--yellow);
-            font-size: 1.2rem;
-            cursor: pointer;
-            z-index: 98;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all .2s;
-        }
-
-        .menu-btn:hover {
-            background: rgba(253, 203, 110, 0.3)
-        }
-
-        .nav-circle {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin: 3px;
-            cursor: pointer;
-            font-size: .7rem;
-            font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            color: var(--text2);
-        }
-
-        .nav-circle:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: scale(1.1);
-        }
-
-        .nav-circle.answered {
-            background: var(--green);
-            color: #fff;
-            border-color: var(--green);
-            animation: popIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-
-        .nav-circle.result-correct {
-            background: var(--green);
-            color: #fff;
-            animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-
-        .nav-circle.result-wrong {
-            background: var(--red);
-            color: #fff;
-            animation: wrongShake 0.5s ease-out;
-        }
-
-        .filter-btn {
-            padding: 4px 10px;
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.03);
-            color: var(--text2);
-            cursor: pointer;
-            font-size: .7rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-
-        .filter-btn:hover {
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateY(-1px);
-        }
-
-        .filter-btn.active {
-            background: rgba(253, 203, 110, 0.3);
-            border-color: rgba(253, 203, 110, 0.5);
-            color: var(--yellow);
-            animation: selectGlow 0.3s ease-out;
-        }
-
-        .submit-btn {
-            background: linear-gradient(135deg, #fdcb6e, #f39c12);
-            color: #1a1a2e;
-            border: none;
-            padding: 14px;
-            border-radius: 50px;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 12px;
-            transition: all 0.2s ease;
-        }
-
-        .submit-btn:hover {
-            box-shadow: 0 8px 30px rgba(253, 203, 110, 0.4);
-            transform: translateY(-2px);
-        }
-
-        .submit-btn:active {
-            transform: scale(0.96);
-        }
-
-        .result-card {
-            animation: slideDown 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-                max-height: 0;
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-                max-height: 500px;
-            }
-        }
-
-        .back-to-top {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: rgba(253, 203, 110, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            font-size: 1.2rem;
-            cursor: pointer;
-            z-index: 90;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(10px);
-        }
-
-        .back-to-top:hover {
-            background: rgba(253, 203, 110, 0.5);
-            transform: translateY(-2px);
-        }
-
-        .back-to-top.show {
-            display: flex;
-            animation: fadeSlideIn 0.3s ease-out;
-        }
-
-        .toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(30, 30, 50, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            padding: 12px 24px;
-            border-radius: 50px;
-            z-index: 300;
-            font-weight: 600;
-            font-size: .85rem;
-            animation: slideIn .3s ease, fadeOut .3s 2s ease forwards;
-            pointer-events: none;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(30px)
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0)
-            }
-        }
-
-        @keyframes fadeOut {
-            to {
-                opacity: 0;
-                transform: translateY(-10px)
-            }
-        }
-
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
-            z-index: 250;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: fadeIn 0.2s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-
-        .modal-dialog {
-            background: rgba(30, 30, 50, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 20px;
-            padding: 30px;
-            max-width: 440px;
-            width: 90%;
-            text-align: center;
-            animation: modalPop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(253, 203, 110, 0.1);
-        }
-
-        @keyframes modalPop {
-            from {
-                opacity: 0;
-                transform: scale(0.9) translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-
-        .modal-dialog h3 {
-            font-size: 1.3rem;
-            margin-bottom: 16px;
-            color: var(--text);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .modal-dialog .modal-icon {
-            font-size: 1.5rem;
-            animation: bulbGlow 2s ease-in-out infinite;
-        }
-
-        .modal-dialog input {
-            width: 100%;
-            padding: 12px 16px;
-            margin: 8px 0 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
-            color: var(--text);
-            font-family: inherit;
-            font-size: 1rem;
-            transition: all 0.2s ease;
-            text-align: center;
-        }
-
-        .modal-dialog input:focus {
-            outline: none;
-            border-color: var(--yellow);
-            box-shadow: 0 0 20px rgba(253, 203, 110, 0.2);
-        }
-
-        .modal-dialog input::placeholder {
-            color: rgba(255, 255, 255, 0.3);
-        }
-
-        .modal-dialog .modal-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .modal-dialog .btn-cancel {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text2);
-            padding: 10px 24px;
-            border-radius: 50px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-        }
-
-        .modal-dialog .btn-cancel:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-        }
-
-        .modal-dialog .btn-gold-modal {
-            background: linear-gradient(135deg, #fdcb6e, #f39c12, #fdcb6e);
-            background-size: 200% 200%;
-            color: #1a1a2e;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 50px;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-            animation: goldShimmer 2s ease-in-out infinite;
-            box-shadow: 0 4px 20px rgba(253, 203, 110, 0.4);
-        }
-
-        .modal-dialog .btn-gold-modal:hover {
-            box-shadow: 0 8px 35px rgba(253, 203, 110, 0.7);
-            transform: translateY(-2px);
-        }
-
-        .modal-dialog .btn-gold-modal:active {
-            transform: scale(0.96);
-        }
-
-        .modal-dialog.danger {
-            border-color: rgba(255, 107, 107, 0.3);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(255, 107, 107, 0.1);
-        }
-
-        .modal-dialog.danger .btn-gold-modal {
-            background: linear-gradient(135deg, #ff6b6b, #e74c3c);
-            animation: none;
-            box-shadow: 0 4px 20px rgba(255, 107, 107, 0.4);
-        }
-
-        .modal-dialog.danger .btn-gold-modal:hover {
-            box-shadow: 0 8px 35px rgba(255, 107, 107, 0.7);
-        }
-
-        .modal-dialog .warning-text {
-            color: var(--text2);
-            font-size: 0.9rem;
-            margin-bottom: 20px;
-            line-height: 1.5;
-        }
-
-        /* Auth Screen */
-        .auth-screen {
-            position: fixed;
-            inset: 0;
-            z-index: 150;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(15, 15, 30, 0.95);
-            backdrop-filter: blur(20px)
-        }
-        .auth-box {
-            background: rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
-            padding: 35px;
-            max-width: 420px;
-            width: 90%;
-            text-align: center
-        }
-        .auth-tabs {
-            display: flex;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 12px;
-            padding: 4px;
-            margin-bottom: 20px
-        }
-        .auth-tab {
-            flex: 1;
-            padding: 10px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: .9rem;
-            border: none;
-            background: none;
-            color: #94a3b8;
-            transition: all .2s
-        }
-        .auth-tab.active {
-            background: rgba(253, 203, 110, 0.2);
-            color: #fdcb6e
-        }
-        .auth-input {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            color: #e2e8f0;
-            font-size: .95rem;
-            font-family: inherit
-        }
-        .auth-input:focus {
-            outline: none;
-            border-color: #fdcb6e
-        }
-        .auth-error {
-            background: rgba(255, 107, 107, 0.15);
-            color: #ff6b6b;
-            padding: 8px;
-            border-radius: 10px;
-            font-size: .8rem;
-            margin: 8px 0;
-            display: none
-        }
-        .auth-error.show {
-            display: block
-        }
-        .user-bar {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            z-index: 300;
-            display: none;
-            align-items: center;
-            gap: 8px;
-            background: rgba(253, 203, 110, 0.1);
-            border-radius: 50px;
-            padding: 4px 16px 4px 4px;
-            cursor: pointer
-        }
-        .user-bar:hover {
-            background: rgba(253, 203, 110, 0.2)
-        }
-        .avatar {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, #fdcb6e, #f39c12);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: .8rem;
-            color: #1a1a2e
-        }
-
-        @media(max-width:768px) {
-            .sidebar {
-                width: 100%
-            }
-            .upload-box {
-                padding: 30px 20px
-            }
-            .menu-btn {
-                left: 10px;
-                width: 38px;
-                height: 38px
-            }
-            .modal-dialog {
-                padding: 24px;
-            }
-            .top-bar {
-                flex-direction: column;
-                align-items: flex-start;
-                padding: 10px 16px;
-            }
-            .action-group {
-                width: 100%;
-                justify-content: flex-end;
-            }
-            .menu-btn {
-                left: 8px;
-                width: 36px;
-                height: 36px;
-                font-size: 1rem;
-            }
-        }
+            --bg:#0f0f1e;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);
+            --text:#e2e8f0;--text2:#94a3b8;--green:#00b894;--red:#ff6b6b;--yellow:#fdcb6e;--radius:18px;
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        html{scroll-behavior:smooth}
+        body{
+            font-family:'Inter',system-ui,sans-serif;
+            background:linear-gradient(135deg,#0f0f1e,#1a1a2e);
+            color:var(--text);min-height:100vh;overflow-x:hidden;
+        }
+        body::before{
+            content:'';position:fixed;inset:0;
+            background:radial-gradient(ellipse at 30% 50%,rgba(108,92,231,0.1) 0%,transparent 50%),
+                       radial-gradient(ellipse at 70% 30%,rgba(253,203,110,0.06) 0%,transparent 50%);
+            pointer-events:none;z-index:0;
+        }
+        .upload-screen{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
+        .upload-box{
+            background:rgba(255,255,255,0.03);backdrop-filter:blur(30px);
+            border:1px solid rgba(255,255,255,0.1);border-radius:24px;
+            padding:40px;text-align:center;max-width:480px;width:100%;
+            box-shadow:0 20px 60px rgba(0,0,0,0.4);
+        }
+        .upload-box.drag-over{border-color:var(--yellow);background:rgba(253,203,110,0.08)}
+        .upload-icon{font-size:4rem;margin-bottom:16px;display:inline-block;animation:bulbGlow 2s ease-in-out infinite}
+        @keyframes bulbGlow{0%,100%{text-shadow:0 0 20px rgba(253,203,110,0.3);transform:scale(1)}50%{text-shadow:0 0 40px rgba(253,203,110,0.8);transform:scale(1.08)}}
+        .logo-text{
+            display:inline-block;background:linear-gradient(135deg,#fdcb6e,#f39c12,#fdcb6e);background-size:200% 200%;
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+            animation:shimmer 2s ease-in-out infinite;
+        }
+        @keyframes shimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+        .upload-title{font-size:1.8rem;font-weight:800;margin-bottom:4px}
+        .upload-subtitle{color:var(--text2);font-size:.9rem;margin:12px 0 24px}
+        .btn{border:none;padding:12px 28px;border-radius:50px;font-weight:700;cursor:pointer;font-size:.9rem}
+        .btn:active{transform:scale(.96)}
+        .btn-primary{background:linear-gradient(135deg,#fdcb6e,#f39c12);color:#1a1a2e}
+        .btn-outline{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--text)}
+        .btn-sm{padding:6px 10px;font-size:.7rem;border-radius:50px}
+        .btn-danger{background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);color:var(--red);padding:6px 10px;font-size:.7rem;border-radius:50px;cursor:pointer}
+        .file-name{margin-top:16px;color:var(--yellow);font-weight:600;font-size:.85rem}
+        #fileInput,#fileInput3,#imageInput{display:none}
+        .loading-overlay{position:fixed;inset:0;background:rgba(15,15,30,0.9);z-index:200;display:none;align-items:center;justify-content:center;flex-direction:column;gap:20px}
+        .loading-overlay.show{display:flex}
+        .spinner{width:50px;height:50px;border:3px solid rgba(255,255,255,0.1);border-top-color:var(--yellow);border-radius:50%;animation:spin .7s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .loading-text{font-weight:600;color:var(--text)}
+        .main-app{display:none;max-width:1200px;margin:0 auto;padding:20px;position:relative;z-index:1}
+        .top-bar{
+            background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);
+            border:1px solid rgba(255,255,255,0.1);border-radius:50px;
+            padding:8px 10px 8px 20px;display:flex;align-items:center;
+            justify-content:space-between;gap:8px;margin-bottom:16px;
+            position:sticky;top:16px;z-index:50;flex-wrap:wrap;
+        }
+        .top-left{display:flex;align-items:center;gap:6px}
+        .logo-icon{font-size:1.2rem;animation:bulbGlow 2s ease-in-out infinite}
+        .logo-name{font-size:1rem;font-weight:800;background:linear-gradient(135deg,#fdcb6e,#f39c12,#fdcb6e);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 2s ease-in-out infinite}
+        .stats{background:rgba(253,203,110,0.15);color:var(--yellow);padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:600}
+        .action-group{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+        .user-pill{
+            position:relative;display:flex;align-items:center;gap:3px;
+            background:rgba(253,203,110,0.1);border-radius:50px;
+            padding:3px 8px 3px 3px;cursor:pointer;transition:all .2s;
+        }
+        .user-pill:hover{background:rgba(253,203,110,0.2)}
+        .avatar-circle{
+            width:32px;height:32px;border-radius:50%;
+            background:linear-gradient(135deg,#fdcb6e,#f39c12);
+            display:flex;align-items:center;justify-content:center;
+            font-weight:800;font-size:.75rem;color:#1a1a2e;flex-shrink:0;
+        }
+        .dropdown-menu{
+            position:absolute;top:110%;right:0;
+            background:rgba(20,20,40,0.98);border:1px solid rgba(255,255,255,0.15);
+            border-radius:14px;padding:6px;min-width:180px;z-index:400;
+            display:none;box-shadow:0 10px 30px rgba(0,0,0,0.5);
+        }
+        .dropdown-menu.show{display:block}
+        .dropdown-item{
+            display:flex;align-items:center;gap:8px;padding:9px 12px;
+            border-radius:10px;cursor:pointer;color:var(--text);
+            font-size:.78rem;font-weight:500;
+        }
+        .dropdown-item:hover{background:rgba(255,255,255,0.08)}
+        .left-panel{
+            background:rgba(255,255,255,0.02);backdrop-filter:blur(20px);
+            border:1px solid var(--border);border-radius:var(--radius);
+            padding:16px;max-height:75vh;overflow-y:auto;scroll-behavior:smooth;
+        }
+        .left-panel::-webkit-scrollbar{width:4px}
+        .left-panel::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:10px}
+        .q-card{
+            background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);
+            border-radius:14px;padding:16px;margin-bottom:10px;
+        }
+        .q-card.correct-card{border-left:3px solid var(--green);background:rgba(0,184,148,0.05)}
+        .q-card.wrong-card{border-left:3px solid var(--red);background:rgba(255,107,107,0.05)}
+        .q-card.hidden{display:none}
+        .q-text{font-weight:700;margin-bottom:10px;line-height:1.5;font-size:.9rem;white-space:pre-wrap}
+        .q-image{max-width:100%;max-height:250px;border-radius:10px;margin-bottom:8px;display:block}
+        .options{display:flex;flex-direction:column;gap:4px}
+        .opt{
+            display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:50px;
+            background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);
+            cursor:pointer;font-size:.85rem;
+        }
+        .opt:hover{background:rgba(255,255,255,0.06)}
+        .opt-letter{
+            font-weight:800;width:28px;height:28px;
+            background:rgba(253,203,110,0.2);color:var(--yellow);border-radius:50%;
+            display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.7rem;
+        }
+        .opt.correct-answer{background:rgba(0,184,148,0.15);border-color:rgba(0,184,148,0.3)}
+        .opt.correct-answer .opt-letter{background:var(--green);color:#fff}
+        .opt.selected-answer{background:rgba(253,203,110,0.25);border-color:rgba(253,203,110,0.5)}
+        .opt.selected-answer .opt-letter{background:#fff;color:#1a1a2e}
+        .answer-badge{display:inline-block;margin-top:6px;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:600}
+        .answer-badge.set{background:rgba(0,184,148,0.15);color:#55efc4}
+        .answer-badge.unset{background:rgba(255,255,255,0.05);color:var(--text2)}
+        .sidebar{
+            position:fixed;top:0;right:0;width:360px;height:100%;
+            background:rgba(15,15,30,0.95);backdrop-filter:blur(30px);
+            border-left:1px solid var(--border);z-index:99;
+            transform:translateX(100%);transition:transform .25s;
+            padding:20px;overflow-y:auto;
+        }
+        .sidebar.open{transform:translateX(0)}
+        .menu-btn{
+            position:fixed;left:16px;top:50%;transform:translateY(-50%);
+            width:40px;height:40px;border-radius:12px;
+            background:rgba(253,203,110,0.2);border:1px solid rgba(253,203,110,0.3);
+            color:var(--yellow);font-size:1.1rem;cursor:pointer;z-index:98;
+            display:flex;align-items:center;justify-content:center;
+        }
+        .nav-circle{
+            width:30px;height:30px;border-radius:50%;
+            background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
+            display:inline-flex;align-items:center;justify-content:center;
+            margin:2px;cursor:pointer;font-size:.65rem;font-weight:600;color:var(--text2);
+        }
+        .nav-circle.answered{background:var(--green);color:#fff}
+        .nav-circle.result-correct{background:var(--green);color:#fff}
+        .nav-circle.result-wrong{background:var(--red);color:#fff}
+        .filter-btn{
+            padding:3px 8px;border-radius:15px;border:1px solid rgba(255,255,255,0.1);
+            background:rgba(255,255,255,0.03);color:var(--text2);cursor:pointer;font-size:.65rem;
+        }
+        .filter-btn.active{background:rgba(253,203,110,0.3);border-color:rgba(253,203,110,0.5);color:var(--yellow)}
+        .submit-btn{
+            background:linear-gradient(135deg,#fdcb6e,#f39c12);color:#1a1a2e;
+            padding:12px;border-radius:50px;font-size:.9rem;font-weight:700;
+            cursor:pointer;width:100%;margin-top:10px;border:none;
+        }
+        .back-to-top{
+            position:fixed;bottom:20px;right:20px;width:40px;height:40px;
+            border-radius:50%;background:rgba(253,203,110,0.3);
+            border:1px solid rgba(255,255,255,0.2);color:#fff;
+            font-size:1rem;cursor:pointer;z-index:90;display:none;
+            align-items:center;justify-content:center;
+        }
+        .back-to-top.show{display:flex}
+        .toast{
+            position:fixed;top:16px;right:16px;
+            background:rgba(25,25,45,0.95);border:1px solid rgba(255,255,255,0.1);
+            padding:10px 18px;border-radius:50px;z-index:300;
+            font-size:.8rem;font-weight:600;
+            animation:fadeOut 2.5s ease forwards;pointer-events:none;
+        }
+        @keyframes fadeOut{0%,70%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
+        .modal-overlay{
+            position:fixed;inset:0;background:rgba(0,0,0,0.7);
+            z-index:250;display:flex;align-items:center;justify-content:center;
+        }
+        .modal-dialog{
+            background:rgba(25,25,45,0.98);border:1px solid rgba(255,255,255,0.15);
+            border-radius:18px;padding:24px;max-width:400px;width:90%;text-align:center;
+        }
+        .modal-dialog h3{font-size:1.1rem;margin-bottom:14px;color:var(--text)}
+        .modal-dialog input{
+            width:100%;padding:10px 14px;margin:8px 0;
+            background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);
+            border-radius:10px;color:var(--text);font-size:.9rem;text-align:center;
+        }
+        .modal-dialog input:focus{outline:none;border-color:var(--yellow)}
+        .modal-buttons{display:flex;gap:8px;justify-content:center;margin-top:12px}
+        .btn-cancel{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--text2);padding:8px 20px;border-radius:50px;cursor:pointer;font-size:.8rem}
+        .btn-gold-modal{background:linear-gradient(135deg,#fdcb6e,#f39c12);color:#1a1a2e;padding:8px 20px;border-radius:50px;cursor:pointer;font-weight:700;font-size:.8rem;border:none}
+        .auth-screen{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;background:rgba(15,15,30,0.95)}
+        .auth-box{background:rgba(255,255,255,0.04);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:30px;max-width:400px;width:90%;text-align:center}
+        .auth-tabs{display:flex;background:rgba(255,255,255,0.03);border-radius:10px;padding:3px;margin-bottom:16px}
+        .auth-tab{flex:1;padding:8px;border-radius:8px;cursor:pointer;font-weight:700;font-size:.85rem;border:none;background:none;color:#94a3b8}
+        .auth-tab.active{background:rgba(253,203,110,0.2);color:#fdcb6e}
+        .auth-input{width:100%;padding:10px;margin:6px 0;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#e2e8f0;font-size:.9rem}
+        .auth-error{background:rgba(255,107,107,0.15);color:#ff6b6b;padding:6px;border-radius:8px;font-size:.75rem;margin:6px 0;display:none}
+        .auth-error.show{display:block}
+        @media(max-width:768px){.sidebar{width:100%}.upload-box{padding:24px 16px}.menu-btn{left:8px;width:36px;height:36px}}
     </style>
 </head>
 <body>
 
-    <!-- Loading -->
-    <div class="loading-overlay" id="loading">
-        <div class="spinner"></div>
-        <div class="loading-text" id="loadingText">Đang xử lý...</div>
-    </div>
+<div class="loading-overlay" id="loading"><div class="spinner"></div><div class="loading-text" id="loadingText">Đang xử lý...</div></div>
 
-    <!-- Auth Screen -->
-    <div class="auth-screen" id="authScreen">
-        <div class="auth-box">
-            <div style="font-size:2rem;margin-bottom:8px">💡</div>
-            <div class="logo-text" style="font-size:1.4rem;margin-bottom:16px">LightQuiz</div>
-            <div class="auth-tabs">
-                <button class="auth-tab active" onclick="switchTab('login')">🔑 Đăng Nhập</button>
-                <button class="auth-tab" onclick="switchTab('register')">📝 Đăng Ký</button>
-            </div>
-            <div id="loginForm">
-                <input class="auth-input" type="email" id="loginEmail" placeholder="Email">
-                <input class="auth-input" type="password" id="loginPass" placeholder="Mật khẩu">
-                <div class="auth-error" id="loginError"></div>
-                <button class="btn-gold" onclick="login()" style="width:100%">🔑 Đăng Nhập</button>
-            </div>
-            <div id="registerForm" style="display:none">
-                <input class="auth-input" type="text" id="regName" placeholder="Tên hiển thị">
-                <input class="auth-input" type="email" id="regEmail" placeholder="Email">
-                <input class="auth-input" type="password" id="regPass" placeholder="Mật khẩu (6+ ký tự)">
-                <input class="auth-input" type="password" id="regConfirm" placeholder="Nhập lại mật khẩu">
-                <div class="auth-error" id="regError"></div>
-                <button class="btn-gold" onclick="register()" style="width:100%">📝 Đăng Ký</button>
-            </div>
+<div class="auth-screen" id="authScreen">
+    <div class="auth-box">
+        <div style="font-size:1.8rem;margin-bottom:6px">💡</div>
+        <div class="logo-text" style="font-size:1.3rem;margin-bottom:12px">LightQuiz</div>
+        <div class="auth-tabs">
+            <button class="auth-tab active" onclick="switchTab('login')">🔑 Đăng Nhập</button>
+            <button class="auth-tab" onclick="switchTab('register')">📝 Đăng Ký</button>
+        </div>
+        <div id="loginForm">
+            <input class="auth-input" type="email" id="loginEmail" placeholder="Email">
+            <input class="auth-input" type="password" id="loginPass" placeholder="Mật khẩu">
+            <div class="auth-error" id="loginError"></div>
+            <button class="btn-gold" onclick="login()" style="width:100%;padding:10px">🔑 Đăng Nhập</button>
+        </div>
+        <div id="registerForm" style="display:none">
+            <input class="auth-input" type="text" id="regName" placeholder="Tên hiển thị">
+            <input class="auth-input" type="email" id="regEmail" placeholder="Email">
+            <input class="auth-input" type="password" id="regPass" placeholder="Mật khẩu (6+ ký tự)">
+            <input class="auth-input" type="password" id="regConfirm" placeholder="Nhập lại mật khẩu">
+            <div class="auth-error" id="regError"></div>
+            <button class="btn-gold" onclick="register()" style="width:100%;padding:10px">📝 Đăng Ký</button>
         </div>
     </div>
+</div>
 
-    <!-- User bar -->
-    <div class="user-bar" id="userBar" onclick="logout()">
-        <div class="avatar" id="userInitial">👤</div>
-        <span style="font-weight:600;color:#fdcb6e;font-size:.8rem" id="userName"></span>
+<div class="upload-screen" id="uploadScreen">
+    <div class="upload-box" id="uploadBox">
+        <div class="upload-icon">💡</div>
+        <div class="upload-title"><span class="logo-text">LightQuiz</span></div>
+        <div class="upload-subtitle">Soi sáng kiến thức - Bứt phá điểm số</div>
+        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📥 Chọn file Word</button>
+        <div class="file-name" id="fileName"></div>
     </div>
+    <input type="file" id="fileInput" accept=".docx">
+</div>
 
-    <!-- Upload -->
-    <div class="upload-screen" id="uploadScreen">
-        <div class="upload-box" id="uploadBox">
-            <div class="upload-icon">💡</div>
-            <div class="upload-title">
-                <span class="logo-text">LightQuiz</span>
-            </div>
-            <div class="upload-subtitle">Soi sáng kiến thức - Bứt phá điểm số</div>
-            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📥 Chọn file Word</button>
-            <div class="file-name" id="fileName"></div>
+<div class="main-app" id="mainApp">
+    <div class="top-bar" id="topBar">
+        <div class="top-left">
+            <span class="logo-icon">💡</span>
+            <span class="logo-name">LightQuiz</span>
+            <span class="stats" id="stats">0/0</span>
         </div>
-        <input type="file" id="fileInput" accept=".docx">
-    </div>
-
-    <!-- Main App -->
-    <div class="main-app" id="mainApp">
-        <div class="top-bar" id="topBar">
-            <div class="logo">
-                <span class="logo-icon">💡</span>
-                <span class="logo-name">LightQuiz</span>
-                <span class="stats" id="stats">0/0</span>
-            </div>
-            <div class="action-group" id="actions">
-                <button class="btn btn-primary btn-sm" onclick="showCreateExamModal()">📌 Tạo đề</button>
-                <button class="btn btn-outline btn-sm" onclick="showResetModal()">🔄 Reset</button>
-                <button class="btn btn-outline btn-sm" onclick="addQuestion()">➕ Thêm</button>
-                <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileInput2').click()">📂 Upload lại</button>
-                <input type="file" id="fileInput2" accept=".docx">
-            </div>
-        </div>
-        <div class="left-panel" id="panel"></div>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <div id="sidebarContent"></div>
-    </div>
-
-    <!-- Menu -->
-    <button class="menu-btn" id="menuBtn" title="Tab để mở">☰</button>
-
-    <!-- Scroll to top -->
-    <button class="back-to-top" id="backToTop" title="Lên đầu">↑</button>
-
-    <script>
-        // ============ GLOBAL ============
-        let questions = [],
-            exams = [];
-        let currentMode = 'teacher';
-        let currentExam = null;
-        let userAnswers = {};
-        let submitted = false;
-        let results = [];
-        let currentFilter = 'all';
-        const $ = id => document.getElementById(id);
-
-        // ============ FIREBASE ============
-        const firebaseConfig = {
-            apiKey: "AIzaSyDof7yrO0Z9YazsfHtevfid2nFwYB9_03Y",
-            authDomain: "lightquiz-app.firebaseapp.com",
-            databaseURL: "https://lightquiz-app-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "lightquiz-app",
-            storageBucket: "lightquiz-app.firebasestorage.app",
-            messagingSenderId: "610026189000",
-            appId: "1:610026189000:web:d4f417e7ab380d8f3b35fd"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const auth = firebase.auth();
-        let currentUser = null;
-        let userExamsRef = null;
-
-        // ============ AUTH ============
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                currentUser = user;
-                userExamsRef = db.ref('users/' + user.uid + '/exams');
-                document.getElementById('authScreen').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'block';
-                document.getElementById('userBar').style.display = 'flex';
-                document.getElementById('userName').textContent = user.email;
-                document.getElementById('userInitial').textContent = (user.email || 'U')[0].toUpperCase();
-                loadUserExams();
-            } else {
-                currentUser = null;
-                userExamsRef = null;
-                exams = [];
-                document.getElementById('authScreen').style.display = 'flex';
-                document.getElementById('mainApp').style.display = 'none';
-                document.getElementById('userBar').style.display = 'none';
-            }
-        });
-
-        function loadUserExams() {
-            if (!userExamsRef) return;
-            userExamsRef.on('value', snap => {
-                const data = snap.val() || {};
-                exams = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-                renderTeacher();
-            });
-        }
-
-        function switchTab(tab) {
-            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-            document.getElementById('loginError').classList.remove('show');
-            document.getElementById('regError').classList.remove('show');
-            if (tab === 'login') {
-                document.getElementById('loginForm').style.display = 'block';
-                document.getElementById('registerForm').style.display = 'none';
-                document.querySelector('.auth-tab:nth-child(1)').classList.add('active');
-            } else {
-                document.getElementById('loginForm').style.display = 'none';
-                document.getElementById('registerForm').style.display = 'block';
-                document.querySelector('.auth-tab:nth-child(2)').classList.add('active');
-            }
-        }
-
-        function login() {
-            const email = document.getElementById('loginEmail').value.trim();
-            const pass = document.getElementById('loginPass').value;
-            const err = document.getElementById('loginError');
-            if (!email || !pass) { err.textContent = '❌ Nhập đầy đủ email và mật khẩu'; err.classList.add('show'); return; }
-            auth.signInWithEmailAndPassword(email, pass)
-                .catch(e => { err.textContent = '❌ Sai email hoặc mật khẩu'; err.classList.add('show'); });
-        }
-
-        function register() {
-            const name = document.getElementById('regName').value.trim();
-            const email = document.getElementById('regEmail').value.trim();
-            const pass = document.getElementById('regPass').value;
-            const confirm = document.getElementById('regConfirm').value;
-            const err = document.getElementById('regError');
-            if (!email || !pass) { err.textContent = '❌ Nhập đầy đủ email và mật khẩu'; err.classList.add('show'); return; }
-            if (pass.length < 6) { err.textContent = '❌ Mật khẩu ít nhất 6 ký tự'; err.classList.add('show'); return; }
-            if (pass !== confirm) { err.textContent = '❌ Mật khẩu không khớp'; err.classList.add('show'); return; }
-            auth.createUserWithEmailAndPassword(email, pass)
-                .then(() => {
-                    if (name) db.ref('users/' + auth.currentUser.uid + '/profile').set({ name, email });
-                    switchTab('login');
-                    document.getElementById('loginEmail').value = email;
-                })
-                .catch(e => { err.textContent = '❌ ' + (e.code === 'auth/email-already-in-use' ? 'Email đã được đăng ký' : 'Lỗi: ' + e.message); err.classList.add('show'); });
-        }
-
-        function logout() {
-            if (confirm('🚪 Đăng xuất?')) auth.signOut();
-        }
-
-        function save() {
-            if (userExamsRef) userExamsRef.set(exams);
-        }
-
-        // ============ ĐẾM LƯỢT TRUY CẬP ============
-        function countVisit() {
-            const visitRef = db.ref('stats/visits');
-            visitRef.transaction(current => (current || 0) + 1);
-            db.ref('stats/visitLog').push({
-                time: Date.now(),
-                userAgent: navigator.userAgent.substring(0, 100),
-                screen: `${window.screen.width}x${window.screen.height}`
-            });
-        }
-
-        function countUniqueVisitor() {
-            const deviceId = localStorage.getItem('lightquiz_device_id');
-            if (!deviceId) {
-                const newId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-                localStorage.setItem('lightquiz_device_id', newId);
-                db.ref('stats/uniqueVisitors').push({
-                    deviceId: newId,
-                    firstVisit: Date.now()
-                });
-            }
-        }
-
-        countVisit();
-        countUniqueVisitor();
-
-        function notify(msg) {
-            const t = document.createElement('div');
-            t.className = 'toast';
-            t.textContent = msg;
-            document.body.appendChild(t);
-            setTimeout(() => t.remove(), 2300);
-        }
-
-        function showLoading(msg) { $('loadingText').textContent = msg;
-            $('loading').classList.add('show'); }
-
-        function hideLoading() { $('loading').classList.remove('show'); }
-
-        // ============ DETECT MOBILE ============
-        function isMobile() {
-            return window.innerWidth <= 768;
-        }
-
-        // ============ UPDATE UI FOR MODE ============
-        function updateUIVisibility() {
-            const menuBtn = $('menuBtn');
-            const actions = $('actions');
-            
-            if (currentMode === 'doing') {
-                // Đang làm bài: ẩn menu và action bar
-                menuBtn.style.display = 'none';
-                actions.style.display = 'none';
-                // Ẩn luôn top bar trên mobile
-                if (isMobile()) {
-                    $('topBar').style.display = 'none';
-                }
-            } else {
-                // Chế độ teacher: hiện menu và action bar
-                menuBtn.style.display = 'flex';
-                actions.style.display = 'flex';
-                $('topBar').style.display = 'flex';
-            }
-        }
-
-        // ============ MODAL HELPER ============
-        function showModal(title, icon, content, buttons, dangerClass = '') {
-            const overlay = document.createElement('div');
-            overlay.className = 'modal-overlay';
-            overlay.innerHTML = `
-            <div class="modal-dialog ${dangerClass}">
-                <h3><span class="modal-icon">${icon}</span> ${title}</h3>
-                ${content}
-                <div class="modal-buttons">${buttons}</div>
-            </div>
-        `;
-            document.body.appendChild(overlay);
-
-            overlay.addEventListener('click', function(e) {
-                if (e.target === overlay) overlay.remove();
-            });
-
-            const escHandler = function(e) {
-                if (e.key === 'Escape') {
-                    overlay.remove();
-                    document.removeEventListener('keydown', escHandler);
-                }
-            };
-            document.addEventListener('keydown', escHandler);
-
-            return overlay;
-        }
-
-        // ============ MODAL: TẠO ĐỀ ============
-        function showCreateExamModal() {
-            if (!questions.length) return notify('❌ Chưa có câu hỏi');
-
-            const defaultName = 'Đề ' + new Date().toLocaleDateString('vi-VN');
-            const content = `
-            <input type="text" id="examNameInput" value="${defaultName}" placeholder="Nhập tên đề..." autofocus>
-        `;
-            const buttons = `
-            <button class="btn-cancel" id="cancelCreateBtn">Hủy</button>
-            <button class="btn-gold-modal" id="confirmCreateBtn">✨ Tạo</button>
-        `;
-
-            const overlay = showModal('📌 Tạo đề mới', '💡', content, buttons);
-
-            const input = overlay.querySelector('#examNameInput');
-            input.focus();
-            input.select();
-
-            overlay.querySelector('#cancelCreateBtn').onclick = () => overlay.remove();
-            overlay.querySelector('#confirmCreateBtn').onclick = () => {
-                const name = input.value.trim();
-                if (!name) {
-                    input.style.borderColor = 'var(--red)';
-                    input.style.animation = 'wrongShake 0.5s ease-out';
-                    setTimeout(() => {
-                        input.style.borderColor = 'rgba(255,255,255,0.15)';
-                        input.style.animation = '';
-                    }, 500);
-                    return;
-                }
-                createExamWithName(name);
-                overlay.remove();
-            };
-
-            input.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') overlay.querySelector('#confirmCreateBtn').click();
-            });
-        }
-
-        function createExamWithName(name) {
-            const examData = {
-                id: Date.now(),
-                name,
-                code: Math.random().toString(36).substring(2, 8).toUpperCase(),
-                questions: JSON.parse(JSON.stringify(questions)),
-                createdAt: Date.now(),
-                attempts: 0,
-                lastAttempt: null
-            };
-            exams.unshift(examData);
-            save();
-            if (userExamsRef) userExamsRef.push(examData);
-            renderTeacher();
-            notify('✅ Đã tạo: ' + name);
-        }
-
-        // ============ MODAL: RESET ============
-        function showResetModal() {
-            const unansweredCount = questions.filter(q => !q.correct).length;
-            const totalCount = questions.length;
-            const content = `
-            <div class="warning-text">
-                Bạn sắp <strong style="color:#ff6b6b">xóa tất cả đáp án</strong> đã chọn!<br><br>
-                📊 Hiện có <strong style="color:#fdcb6e">${totalCount - unansweredCount}/${totalCount}</strong> câu đã có đáp án.<br>
-                ⚠️ <strong style="color:#ff6b6b">${unansweredCount}</strong> câu chưa có đáp án.
-            </div>
-        `;
-            const buttons = `
-            <button class="btn-cancel" id="cancelResetBtn">Hủy</button>
-            <button class="btn-gold-modal" id="confirmResetBtn">🗑 Xác nhận xóa</button>
-        `;
-
-            const overlay = showModal('🔄 Reset đáp án', '⚠️', content, buttons, 'danger');
-
-            overlay.querySelector('#cancelResetBtn').onclick = () => overlay.remove();
-            overlay.querySelector('#confirmResetBtn').onclick = () => {
-                questions.forEach(q => q.correct = null);
-                overlay.remove();
-                renderTeacher();
-                notify('🔄 Đã reset tất cả đáp án');
-            };
-        }
-
-        // ============ MODAL: XÓA CÂU HỎI ============
-        function showDeleteQuestionModal(idx) {
-            const q = questions[idx];
-            const content = `
-            <div class="warning-text">
-                Bạn có chắc muốn <strong style="color:#ff6b6b">xóa vĩnh viễn</strong> câu hỏi này?<br><br>
-                📝 <strong>Câu ${idx + 1}:</strong> ${q.text.substring(0, 100)}${q.text.length > 100 ? '...' : ''}<br>
-                ${q.correct ? '✅ Đáp án: <strong style="color:#55efc4">' + q.correct + '</strong>' : '⚠️ Chưa có đáp án'}
-            </div>
-        `;
-            const buttons = `
-            <button class="btn-cancel" id="cancelDeleteBtn">Hủy</button>
-            <button class="btn-gold-modal" id="confirmDeleteBtn">🗑 Xác nhận xóa</button>
-        `;
-
-            const overlay = showModal('🗑 Xóa câu hỏi', '⚠️', content, buttons, 'danger');
-
-            overlay.querySelector('#cancelDeleteBtn').onclick = () => overlay.remove();
-            overlay.querySelector('#confirmDeleteBtn').onclick = () => {
-                questions.splice(idx, 1);
-                questions.forEach((q, i) => q.id = i + 1);
-                overlay.remove();
-                renderTeacher();
-                notify('🗑 Đã xóa câu ' + (idx + 1));
-            };
-        }
-
-        // ============ PARSE ============
-        function parseQuestions(text) {
-            text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-            const blocks = [];
-            let current = null;
-
-            for (const line of lines) {
-                let m = line.match(/^(?:Câu|câu)\s*(\d+)[:.]?\s*(.*)/i);
-                if (!m) {
-                    m = line.match(/^(\d+)[:.]\s+(.+)/);
-                    if (m && parseInt(m[1]) >= 1 && parseInt(m[1]) <= 200) m = [m[0], m[1], m[2]];
-                    else m = null;
-                }
-                if (m) {
-                    if (current) blocks.push(current);
-                    current = { num: parseInt(m[1]), content: [m[2] || ''] };
-                } else if (current) {
-                    current.content.push(line);
-                }
-            }
-            if (current) blocks.push(current);
-
-            const result = [];
-            for (const block of blocks) {
-                const full = block.content.join(' ');
-                let options = [];
-                const optRegex = /([A-D])\.\s+(.*?)(?=\s+[A-D]\.\s|$)/g;
-                let m;
-                while ((m = optRegex.exec(full)) !== null) {
-                    const label = m[1];
-                    if (!options.find(o => o.label === label)) options.push({ label, content: m[2].trim() });
-                }
-                if (options.length < 2) {
-                    options = [];
-                    for (const line of block.content) {
-                        const om = line.match(/^([A-D])\.\s+(.+)/);
-                        if (om) options.push({ label: om[1], content: om[2].trim() });
-                    }
-                }
-                if (options.length < 2) {
-                    const parts = full.split(/\s+[A-D]\.\s+/);
-                    if (parts.length >= 5) {
-                        options = [
-                            { label: 'A', content: parts[1].trim() },
-                            { label: 'B', content: parts[2].trim() },
-                            { label: 'C', content: parts[3].trim() },
-                            { label: 'D', content: parts[4].trim() }
-                        ];
-                    }
-                }
-
-                if (options.length >= 2) {
-                    let qText = full;
-                    const idx = full.search(/[A-D]\./);
-                    if (idx > 0) qText = full.substring(0, idx).trim();
-                    const seen = new Set();
-                    let filtered = [];
-                    for (const o of options) { if (!seen.has(o.label)) { seen.add(o.label);
-                            filtered.push(o); } }
-                    while (filtered.length < 4) { const labels = ['A', 'B', 'C', 'D']; const missing = labels.find(l => !seen
-                            .has(l)); if (missing) { filtered.push({ label: missing, content: '' });
-                            seen.add(missing); } else break; }
-                    filtered.sort((a, b) => a.label.localeCompare(b.label));
-                    result.push({ id: block.num, text: qText || `Câu ${block.num}`, options: filtered.slice(0, 4),
-                        correct: null });
-                }
-            }
-            result.sort((a, b) => a.id - b.id);
-            result.forEach((q, i) => q.id = i + 1);
-            return result;
-        }
-
-        // ============ LOAD FILE ============
-        async function loadFile(file) {
-            showLoading('Đang đọc file...');
-            try {
-                const buf = await file.arrayBuffer();
-                const result = await mammoth.extractRawText({ arrayBuffer: buf });
-                const text = result.value;
-                if (!text || text.length < 10) throw new Error('File rỗng');
-                const parsed = parseQuestions(text);
-                if (!parsed.length) throw new Error('Không tìm thấy câu hỏi');
-                questions = parsed;
-                hideLoading();
-                $('uploadScreen').style.display = 'none';
-                renderTeacher();
-                notify(`✅ Đã tải ${parsed.length} câu hỏi`);
-            } catch (e) {
-                hideLoading();
-                notify('❌ ' + e.message);
-            }
-        }
-
-        // ============ SCROLL TO TOP ============
-        function setupScrollToTop() {
-            const panel = $('panel');
-            const btn = $('backToTop');
-
-            panel.addEventListener('scroll', function() {
-                if (panel.scrollTop > 200) {
-                    btn.classList.add('show');
-                } else {
-                    btn.classList.remove('show');
-                }
-            });
-
-            btn.onclick = function() {
-                panel.scrollTo({ top: 0, behavior: 'smooth' });
-            };
-        }
-
-        // ============ UPDATE STATS ============
-        function updateStats() {
-            const a = questions.filter(q => q.correct).length;
-            $('stats').textContent = `${a}/${questions.length}`;
-        }
-
-        // ============ SET CORRECT ============
-        function setCorrect(idx, letter) {
-            if (currentMode !== 'teacher') return;
-            questions[idx].correct = letter;
-            const card = $('q_' + idx);
-            if (card) {
-                card.querySelectorAll('.opt').forEach(o => {
-                    o.classList.remove('correct-answer');
-                    if (o.getAttribute('data-letter') === letter) o.classList.add('correct-answer');
-                });
-                const badge = card.querySelector('.answer-badge');
-                badge.textContent = '✅ ' + letter;
-                badge.className = 'answer-badge set';
-            }
-            updateStats();
-        }
-
-        // ============ RENDER TEACHER ============
-        function renderTeacher() {
-            currentMode = 'teacher';
-            currentExam = null;
-            userAnswers = {};
-            submitted = false;
-            results = [];
-            $('actions').style.display = 'flex';
-            updateStats();
-            updateUIVisibility();
-
-            let sideHtml = '<h3 style="margin-bottom:12px;color:var(--text)">📋 Đề thi</h3>';
-            if (exams.length) {
-                exams.forEach(ex => {
-                    sideHtml +=
-                        `<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
-                <div><b>${ex.name}</b><br><small style="color:var(--text2)">${ex.code} - ${ex.questions.length} câu</small></div>
-                <div style="display:flex;gap:4px">
-                    <button class="btn btn-outline btn-sm" onclick="exportExam(${ex.id})">📥</button>
-                    <button class="btn btn-primary btn-sm" onclick="doExam(${ex.id})">🎯</button>
+        <div class="action-group" id="actions">
+            <button class="btn btn-primary btn-sm" onclick="shuffleQuestions()">🔀 Xáo</button>
+            <button class="btn btn-primary btn-sm" onclick="showCreateExamModal()">📌 Tạo đề</button>
+            <button class="btn btn-outline btn-sm" onclick="showResetModal()">🔄 Reset</button>
+            <button class="btn-danger" onclick="clearAllQuestions()">🗑 Xóa hết</button>
+            <div class="user-pill" id="userPill" onclick="toggleDropdown(event)">
+                <div class="avatar-circle" id="userInitial">U</div>
+                <span style="font-size:.55rem;color:var(--yellow)">▼</span>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <div class="dropdown-item" onclick="event.stopPropagation();addQuestion()">➕ Thêm câu</div>
+                    <div class="dropdown-item" onclick="event.stopPropagation();document.getElementById('fileInput3').click()">📂 Thêm file</div>
+                    <div class="dropdown-item" onclick="event.stopPropagation();showImageModal()">🖼 Thêm ảnh</div>
+                    <div class="dropdown-item" onclick="event.stopPropagation();logout()" style="color:#ff6b6b">🚪 Đăng xuất</div>
                 </div>
-            </div>`;
-                });
-                sideHtml +=
-                    '<button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px;color:var(--red)" onclick="deleteExams()">🗑 Xóa đề</button>';
-            } else {
-                sideHtml +=
-                    '<div style="color:var(--text2);text-align:center;padding:20px">Chưa có đề</div>';
-            }
-            $('sidebarContent').innerHTML = sideHtml;
-
-            if (!questions.length) {
-                $('panel').innerHTML =
-                    '<div style="text-align:center;padding:60px;color:var(--text2)"><div style="font-size:3rem;margin-bottom:12px">💡</div>Chưa có câu hỏi</div>';
-                return;
-            }
-            let html = '';
-            questions.forEach((q, idx) => {
-                const opts = q.options.map(opt =>
-                    `<div class="opt ${q.correct === opt.label ? 'correct-answer' : ''}" data-letter="${opt.label}" onclick="setCorrect(${idx},'${opt.label}')">
-                <span class="opt-letter">${opt.label}</span>
-                <span>${opt.content || '(Trống)'}</span>
-            </div>`
-                ).join('');
-                html += `<div class="q-card" id="q_${idx}">
-            <div class="q-text">Câu ${q.id}: ${q.text}</div>
-            <div class="options">${opts}</div>
-            <div class="answer-badge ${q.correct ? 'set' : 'unset'}">${q.correct ? '✅ ' + q.correct : '⚡ Chưa chọn'}</div>
-            <div style="margin-top:8px;display:flex;gap:6px">
-                <button class="btn btn-outline btn-sm" onclick="editQ(${idx})">✏️ Sửa</button>
-                <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="showDeleteQuestionModal(${idx})">🗑</button>
             </div>
-        </div>`;
-            });
-            $('panel').innerHTML = html;
-            setupScrollToTop();
-        }
-
-        // ============ EDIT ============
-        function editQ(idx) {
-            const q = questions[idx];
-            const overlay = document.createElement('div');
-            overlay.className = 'modal-overlay';
-            overlay.innerHTML = `<div class="modal-dialog" style="text-align:left;max-width:550px">
-        <h3 style="text-align:center"><span class="modal-icon">✏️</span> Sửa câu ${idx + 1}</h3>
-        <label style="display:block;font-weight:600;margin:6px 0 2px;font-size:.8rem;color:var(--text2)">Nội dung:</label>
-        <textarea id="et" rows="3" style="width:100%;padding:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:var(--text);font-family:inherit;font-size:.9rem;resize:vertical;text-align:left">${q.text}</textarea>
-        ${q.options.map((o,i) => `<label style="display:block;font-weight:600;margin:6px 0 2px;font-size:.8rem;color:var(--text2)">Đáp án ${['A','B','C','D'][i]}:</label><input id="e${i}" value="${o.content || ''}" style="width:100%;padding:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:var(--text);font-family:inherit;font-size:.9rem;text-align:left">`).join('')}
-        <label style="display:block;font-weight:600;margin:6px 0 2px;font-size:.8rem;color:var(--text2)">Đáp án đúng:</label>
-        <select id="ec" style="width:100%;padding:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:var(--text);font-family:inherit;font-size:.9rem"><option value="">-- Chọn --</option>${['A','B','C','D'].map(l => `<option value="${l}" ${q.correct===l?'selected':''}>${l}</option>`).join('')}</select>
-        <div style="display:flex;gap:8px;justify-content:center;margin-top:20px">
-            <button class="btn-cancel" id="cancelEditBtn">Hủy</button>
-            <button class="btn-gold-modal" id="saveEditBtn">💾 Lưu</button>
+            <input type="file" id="fileInput3" accept=".docx">
+            <input type="file" id="imageInput" accept="image/*">
         </div>
-    </div>`;
-            document.body.appendChild(overlay);
+    </div>
+    <div class="left-panel" id="panel"></div>
+</div>
 
-            overlay.addEventListener('click', function(e) {
-                if (e.target === overlay) overlay.remove();
-            });
+<div class="sidebar" id="sidebar"><div id="sidebarContent"></div></div>
+<button class="menu-btn" id="menuBtn">☰</button>
+<button class="back-to-top" id="backToTop">↑</button>
 
-            overlay.querySelector('#cancelEditBtn').onclick = () => overlay.remove();
-            overlay.querySelector('#saveEditBtn').onclick = () => {
-                q.text = overlay.querySelector('#et').value.trim() || q.text;
-                q.options.forEach((o, i) => o.content = overlay.querySelector('#e' + i).value.trim());
-                q.correct = overlay.querySelector('#ec').value || null;
-                overlay.remove();
-                renderTeacher();
-                notify('✅ Đã lưu');
-            };
+<script>
+const $=id=>document.getElementById(id);
+const firebaseConfig={
+    apiKey:"AIzaSyDof7yrO0Z9YazsfHtevfid2nFwYB9_03Y",
+    authDomain:"lightquiz-app.firebaseapp.com",
+    databaseURL:"https://lightquiz-app-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId:"lightquiz-app",
+    storageBucket:"lightquiz-app.firebasestorage.app",
+    messagingSenderId:"610026189000",
+    appId:"1:610026189000:web:d4f417e7ab380d8f3b35fd"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database(),auth=firebase.auth();
+let currentUser=null,userExamsRef=null,questions=[],exams=[];
+let currentMode='teacher',currentExam=null,userAnswers={},submitted=false,results=[];
+
+// AUTH
+auth.onAuthStateChanged(user=>{
+    if(user){
+        currentUser=user;userExamsRef=db.ref('users/'+user.uid+'/exams');
+        $('authScreen').style.display='none';$('mainApp').style.display='block';
+        $('userInitial').textContent=(user.email||'U')[0].toUpperCase();
+        loadUserExams();
+    }else{
+        currentUser=null;userExamsRef=null;exams=[];
+        $('authScreen').style.display='flex';$('mainApp').style.display='none';
+    }
+});
+function loadUserExams(){
+    if(!userExamsRef)return;
+    userExamsRef.on('value',snap=>{exams=Object.values(snap.val()||{}).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));renderTeacher()});
+}
+function switchTab(tab){
+    document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
+    $('loginError').classList.remove('show');$('regError').classList.remove('show');
+    if(tab==='login'){$('loginForm').style.display='block';$('registerForm').style.display='none';document.querySelector('.auth-tab:nth-child(1)').classList.add('active')}
+    else{$('loginForm').style.display='none';$('registerForm').style.display='block';document.querySelector('.auth-tab:nth-child(2)').classList.add('active')}
+}
+function login(){
+    const e=$('loginEmail').value.trim(),p=$('loginPass').value,er=$('loginError');
+    if(!e||!p){er.textContent='❌ Nhập đầy đủ';er.classList.add('show');return}
+    auth.signInWithEmailAndPassword(e,p).catch(()=>{er.textContent='❌ Sai email/mật khẩu';er.classList.add('show')});
+}
+function register(){
+    const n=$('regName').value.trim(),e=$('regEmail').value.trim(),p=$('regPass').value,c=$('regConfirm').value,er=$('regError');
+    if(!e||!p){er.textContent='❌ Nhập đầy đủ';er.classList.add('show');return}
+    if(p.length<6){er.textContent='❌ Mật khẩu 6+ ký tự';er.classList.add('show');return}
+    if(p!==c){er.textContent='❌ Không khớp';er.classList.add('show');return}
+    auth.createUserWithEmailAndPassword(e,p).then(()=>{if(n)db.ref('users/'+auth.currentUser.uid+'/profile').set({name:n,email:e});switchTab('login');$('loginEmail').value=e}).catch(x=>{er.textContent='❌ '+(x.code==='auth/email-already-in-use'?'Email đã đăng ký':'Lỗi');er.classList.add('show')});
+}
+function logout(){if(confirm('🚪 Đăng xuất?'))auth.signOut()}
+function save(){if(userExamsRef)userExamsRef.set(exams)}
+
+// DROPDOWN
+function toggleDropdown(e){e.stopPropagation();$('dropdownMenu').classList.toggle('show')}
+document.addEventListener('click',()=>$('dropdownMenu').classList.remove('show'));
+
+// TOAST
+function notify(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
+function showLoading(m){$('loadingText').textContent=m;$('loading').classList.add('show')}
+function hideLoading(){$('loading').classList.remove('show')}
+
+// MODAL NHẬP SỐ CÂU ĐỂ THÊM ẢNH
+function showImageModal(){
+    if(!questions.length){notify('❌ Chưa có câu hỏi');return}
+    const overlay=document.createElement('div');overlay.className='modal-overlay';
+    overlay.innerHTML=`<div class="modal-dialog"><h3>🖼 Thêm ảnh vào câu số mấy?</h3><input type="number" id="imgQNum" placeholder="Nhập số câu (1-${questions.length})" min="1" max="${questions.length}"><div class="modal-buttons"><button class="btn-cancel" id="cancelImg">Hủy</button><button class="btn-gold-modal" id="confirmImg">📸 Chọn ảnh</button></div></div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove()});
+    overlay.querySelector('#cancelImg').onclick=()=>overlay.remove();
+    overlay.querySelector('#confirmImg').onclick=()=>{
+        const num=parseInt(overlay.querySelector('#imgQNum').value);
+        if(!num||num<1||num>questions.length){notify('❌ Số câu không hợp lệ');return}
+        overlay.remove();
+        // Lưu số câu tạm thời rồi mở file input
+        window._imgTargetQ=num-1;
+        $('imageInput').click();
+    };
+}
+
+// PARSE
+function parseQuestions(text){
+    text=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+    const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
+    const blocks=[];let current=null;
+    for(const line of lines){
+        let m=line.match(/^(?:Câu|câu)\s*(\d+)[:.]?\s*(.*)/i);
+        if(!m){m=line.match(/^(\d+)[:.]\s+(.+)/);if(m&&parseInt(m[1])>=1&&parseInt(m[1])<=200)m=[m[0],m[1],m[2]];else m=null}
+        if(m){if(current)blocks.push(current);current={num:parseInt(m[1]),content:[m[2]||'']}}
+        else if(current)current.content.push(line);
+    }
+    if(current)blocks.push(current);
+    const result=[];
+    for(const block of blocks){
+        const full=block.content.join(' ');let options=[];
+        const optRegex=/([A-D])\.\s+(.*?)(?=\s+[A-D]\.\s|$)/g;let m;
+        while((m=optRegex.exec(full))!==null){const label=m[1];if(!options.find(o=>o.label===label))options.push({label,content:m[2].trim()})}
+        if(options.length<2){options=[];for(const line of block.content){const om=line.match(/^([A-D])\.\s+(.+)/);if(om)options.push({label:om[1],content:om[2].trim()})}}
+        if(options.length<2){const parts=full.split(/\s+[A-D]\.\s+/);if(parts.length>=5)options=[{label:'A',content:parts[1].trim()},{label:'B',content:parts[2].trim()},{label:'C',content:parts[3].trim()},{label:'D',content:parts[4].trim()}]}
+        if(options.length>=2){
+            let qText=full;const idx=full.search(/[A-D]\./);if(idx>0)qText=full.substring(0,idx).trim();
+            const seen=new Set();let filtered=[];
+            for(const o of options){if(!seen.has(o.label)){seen.add(o.label);filtered.push(o)}}
+            while(filtered.length<4){const labels=['A','B','C','D'];const missing=labels.find(l=>!seen.has(l));if(missing){filtered.push({label:missing,content:''});seen.add(missing)}else break}
+            filtered.sort((a,b)=>a.label.localeCompare(b.label));
+            result.push({id:block.num,text:qText||`Câu ${block.num}`,options:filtered.slice(0,4),correct:null,image:null});
         }
+    }
+    result.sort((a,b)=>a.id-b.id);result.forEach((q,i)=>q.id=i+1);
+    return result;
+}
 
-        // ============ EXAMS ============
-        function deleteExams() {
-            if (!exams.length) return notify('Không có đề');
-            const overlay = document.createElement('div');
-            overlay.className = 'modal-overlay';
-            overlay.innerHTML = `<div class="modal-dialog" style="max-width:500px">
-        <h3><span class="modal-icon">🗑</span> Xóa đề</h3>
-        <div style="max-height:300px;overflow-y:auto;margin:12px 0;text-align:left">
-            ${exams.map(e => `<label style="display:flex;align-items:center;gap:8px;margin:4px 0;cursor:pointer;padding:8px;border-radius:8px;transition:all 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'"><input type="checkbox" value="${e.id}"> ${e.name} (${e.code})</label>`).join('')}
-        </div>
-        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-            <button class="btn-cancel" id="cancelDelExamBtn">Hủy</button>
-            <button class="btn-gold-modal" id="delSelExamBtn">🗑 Xóa đã chọn</button>
-        </div>
-    </div>`;
-            document.body.appendChild(overlay);
+// LOAD FILE
+async function loadFile(file,append=false){
+    showLoading('Đang đọc file...');
+    try{
+        const buf=await file.arrayBuffer();
+        const result=await mammoth.extractRawText({arrayBuffer:buf});
+        const text=result.value;
+        if(!text||text.length<10)throw new Error('File rỗng');
+        const parsed=parseQuestions(text);
+        if(!parsed.length)throw new Error('Không tìm thấy câu hỏi');
+        if(append&&questions.length>0){
+            const startId=questions.length+1;
+            parsed.forEach((q,i)=>{q.id=startId+i});
+            questions=[...questions,...parsed];
+        }else{questions=parsed}
+        hideLoading();
+        if(!append)$('uploadScreen').style.display='none';
+        renderTeacher();
+        notify(`✅ ${append?'Nối tiếp':'Đã tải'} ${parsed.length} câu`);
+    }catch(e){hideLoading();notify('❌ '+e.message)}
+}
 
-            overlay.addEventListener('click', function(e) {
-                if (e.target === overlay) overlay.remove();
-            });
+// IMAGE
+function loadImageToQuestion(file,targetIdx){
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=function(e){
+        questions[targetIdx].image=e.target.result;
+        renderTeacher();
+        notify(`🖼 Đã thêm ảnh vào câu ${targetIdx+1}`);
+    };
+    reader.readAsDataURL(file);
+}
 
-            overlay.querySelector('#cancelDelExamBtn').onclick = () => overlay.remove();
-            overlay.querySelector('#delSelExamBtn').onclick = () => {
-                const ids = [...overlay.querySelectorAll('input:checked')].map(i => parseInt(i.value));
-                if (!ids.length) return notify('Chưa chọn đề nào');
-                exams = exams.filter(e => !ids.includes(e.id));
-                save();
-                overlay.remove();
-                renderTeacher();
-                notify('Đã xóa ' + ids.length + ' đề');
-            };
-        }
+// SHUFFLE
+function shuffleQuestions(){
+    if(questions.length<2)return notify('Cần ít nhất 2 câu');
+    for(let i=questions.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[questions[i],questions[j]]=[questions[j],questions[i]]}
+    questions.forEach((q,i)=>q.id=i+1);
+    renderTeacher();notify('🔀 Đã xáo trộn');
+}
+function clearAllQuestions(){
+    if(!questions.length)return;
+    if(!confirm('🗑 Xóa toàn bộ?'))return;
+    questions=[];renderTeacher();notify('🗑 Đã xóa hết');
+}
 
-        function addQuestion() {
-            questions.push({
-                id: questions.length + 1,
-                text: 'Nhập nội dung câu hỏi',
-                options: [{ label: 'A', content: '' }, { label: 'B', content: '' }, { label: 'C', content: '' },
-                    { label: 'D', content: '' }
-                ],
-                correct: null
-            });
-            renderTeacher();
-            setTimeout(() => {
-                const lastCard = $('panel').querySelector('.q-card:last-child');
-                if (lastCard) lastCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 100);
-            notify('➕ Đã thêm câu mới');
-        }
+// SETUP
+function setupScrollToTop(){
+    const panel=$('panel'),btn=$('backToTop');
+    panel.addEventListener('scroll',()=>{panel.scrollTop>200?btn.classList.add('show'):btn.classList.remove('show')});
+    btn.onclick=()=>panel.scrollTo({top:0,behavior:'smooth'});
+}
+function updateStats(){$('stats').textContent=`${questions.filter(q=>q.correct).length}/${questions.length}`}
 
-        // ============ EXPORT ============
-        function exportExam(id) {
-            const ex = exams.find(e => e.id === id);
-            if (!ex) return;
-            const html = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>LightQuiz - ${ex.name}</title><style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}
-html{scroll-behavior:smooth}
-body{background:linear-gradient(135deg,#0f0f1e,#1a1a2e);color:#e2e8f0;padding:20px;min-height:100vh}
-.cont{max-width:1000px;margin:0 auto}
-.head{background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:20px;text-align:center;margin-bottom:16px}
-.head h1{font-size:1.8rem;font-weight:800;margin-bottom:4px}
-.head h1 span{background:linear-gradient(135deg,#fdcb6e,#f39c12,#fdcb6e);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 2s ease-in-out infinite}
-@keyframes shimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-.qa{max-height:70vh;overflow-y:auto;scroll-behavior:smooth;padding-right:8px}
-.qa::-webkit-scrollbar{width:4px}.qa::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:10px}
-.qc{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:20px;margin:12px 0;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);animation:fadeSlideIn 0.4s ease-out}
-.qc:hover{border-color:rgba(255,255,255,0.12)}.qc.correct{border-left:4px solid #00b894;animation:correctPulse 0.6s ease-out}.qc.wrong{border-left:4px solid #ff6b6b;animation:wrongShake 0.5s ease-out}.qc.hidden{display:none}
-@keyframes fadeSlideIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-@keyframes correctPulse{0%{box-shadow:0 0 0 0 rgba(0,184,148,0.4)}70%{box-shadow:0 0 0 15px rgba(0,184,148,0)}100%{box-shadow:0 0 0 0 rgba(0,184,148,0)}}
-@keyframes wrongShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
-@keyframes popIn{0%{transform:scale(0)}80%{transform:scale(1.2)}100%{transform:scale(1)}}
-@keyframes slideDown{from{opacity:0;transform:translateY(-30px);max-height:0}to{opacity:1;transform:translateY(0);max-height:500px}}
-@keyframes goldShimmer{0%,100%{background-position:0% 50%;box-shadow:0 4px 20px rgba(253,203,110,0.4)}50%{background-position:100% 50%;box-shadow:0 8px 40px rgba(253,203,110,0.8)}}
-.qt{font-weight:700;margin-bottom:12px;line-height:1.6;white-space:pre-wrap}
-.opts{display:flex;flex-direction:column;gap:6px}
-.opt{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:50px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);cursor:pointer;transition:all 0.2s cubic-bezier(0.4,0,0.2,1)}
-.opt:hover{background:rgba(255,255,255,0.06);transform:translateX(4px)}.opt:active{transform:scale(0.98)}
-.opt.selected{background:rgba(253,203,110,0.25);border-color:rgba(253,203,110,0.5);animation:selectGlow 0.3s ease-out}.opt.selected .lt{background:#fff;color:#1a1a2e;animation:popIn 0.3s cubic-bezier(0.68,-0.55,0.265,1.55)}
-.opt.corhl{background:rgba(0,184,148,0.15);border-color:rgba(0,184,148,0.3);animation:highlightCorrect 0.5s ease-out}
-@keyframes selectGlow{0%{box-shadow:0 0 0 0 rgba(253,203,110,0.4)}100%{box-shadow:0 0 20px 5px rgba(253,203,110,0)}}
-@keyframes highlightCorrect{0%{background:rgba(0,184,148,0.4)}100%{background:rgba(0,184,148,0.15)}}
-.lt{font-weight:800;width:32px;height:32px;background:rgba(253,203,110,0.2);color:#fdcb6e;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.3s ease}
-.btop{position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;background:rgba(253,203,110,0.3);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:1.2rem;cursor:pointer;z-index:50;display:none;align-items:center;justify-content:center;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);backdrop-filter:blur(10px)}
-.btop:hover{background:rgba(253,203,110,0.5);transform:translateY(-2px)}.btop.show{display:flex;animation:fadeSlideIn 0.3s ease-out}
-.sbtn{background:linear-gradient(135deg,#fdcb6e,#f39c12,#fdcb6e);background-size:200% 200%;color:#1a1a2e;border:none;padding:14px;border-radius:50px;font-size:1rem;cursor:pointer;width:100%;margin:12px 0;font-weight:700;transition:all 0.2s ease;animation:goldShimmer 2s ease-in-out infinite}
-.sbtn:hover{box-shadow:0 8px 30px rgba(253,203,110,0.4);transform:translateY(-2px)}.sbtn:active{transform:scale(0.96)}
-.result{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:20px;text-align:center;margin-top:16px;animation:slideDown 0.5s cubic-bezier(0.4,0,0.2,1)}.score{font-size:2rem;font-weight:800;background:linear-gradient(135deg,#fdcb6e,#f39c12);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.nw{position:fixed;right:12px;top:50%;transform:translateY(-50%);z-index:100;display:flex;align-items:stretch}.nt{background:rgba(253,203,110,0.3);color:#fff;border:none;border-radius:10px 0 0 10px;width:28px;cursor:pointer;font-size:1rem}.nt:hover{background:rgba(253,203,110,0.5)}
-.nav{background:rgba(15,15,30,0.9);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:0 14px 14px 0;padding:14px;max-height:75vh;overflow-y:auto;scroll-behavior:smooth;width:280px;transition:all .3s}.nav.collapsed{width:0;padding:0;overflow:hidden;opacity:0}
-.nc{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.05);display:inline-flex;align-items:center;justify-content:center;margin:3px;cursor:pointer;font-size:11px;font-weight:600;color:#94a3b8;flex-shrink:0;transition:all 0.3s cubic-bezier(0.4,0,0.2,1)}.nc:hover{background:rgba(255,255,255,0.1);transform:scale(1.1)}.nc.answered{background:#00b894;color:#fff;animation:popIn 0.3s cubic-bezier(0.68,-0.55,0.265,1.55)}.nc.rc{background:#00b894;color:#fff;animation:popIn 0.5s cubic-bezier(0.68,-0.55,0.265,1.55)}.nc.rw{background:#ff6b6b;color:#fff;animation:wrongShake 0.5s ease-out}
-.fb{display:flex;gap:4px;justify-content:center;margin:10px 0}.fbtn{padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:#94a3b8;cursor:pointer;font-size:11px;transition:all 0.2s ease}.fbtn:hover{background:rgba(255,255,255,0.08);transform:translateY(-1px)}.fbtn.active{background:rgba(253,203,110,0.3);border-color:rgba(253,203,110,0.5);color:#fdcb6e;animation:selectGlow 0.3s ease-out}
-@media(max-width:768px){.nw{position:static;transform:none;margin-bottom:12px;flex-direction:row-reverse}.nt{border-radius:0 10px 10px 0}.nav{border-radius:10px 0 0 10px;width:100%}.nav.collapsed{width:0}}
-</style></head><body><div class="cont"><div class="head"><h1>💡 <span>LightQuiz</span></h1><div style="color:#94a3b8;font-size:.85rem">Mã đề: ${ex.code}</div><div style="color:#94a3b8;font-size:.8rem;margin-top:4px">Soi sáng kiến thức - Bứt phá điểm số</div></div><div class="mw" style="display:flex;gap:16px;flex-wrap:wrap"><div class="qa" id="qa" style="flex:1"></div></div><div class="nw"><button class="nt" id="ntb" title="Thu/Phóng (Tab)">◀</button><div class="nav" id="nb"></div></div><button class="btop" id="btop" title="Lên đầu">↑</button></div><script>
-const ed=${JSON.stringify({name:ex.name,code:ex.code,questions:ex.questions})};let ua={},sub=false,res=[],cf="all",nc=false;
-document.getElementById('ntb').onclick=function(){nc=!nc;var n=document.getElementById('nb');var b=document.getElementById('ntb');if(nc){n.classList.add('collapsed');b.textContent='▶'}else{n.classList.remove('collapsed');b.textContent='◀'}};
-var qa=document.getElementById('qa');var btop=document.getElementById('btop');
-qa.addEventListener('scroll',function(){if(qa.scrollTop>200)btop.classList.add('show');else btop.classList.remove('show')});
-btop.onclick=function(){qa.scrollTo({top:0,behavior:'smooth'})};
-document.addEventListener('keydown',function(e){if(e.key==='Tab'){e.preventDefault();document.getElementById('ntb').click()}});
-function rnd(){var h='';ed.questions.forEach(function(q,i){var o='';q.options.forEach(function(opt){o+='<div class="opt" data-i="'+i+'" data-l="'+opt.label+'"><div class="lt">'+opt.label+'</div><div>'+opt.content+'</div></div>'});h+='<div class="qc" id="c_'+i+'"><div class="qt">Câu '+(i+1)+': '+q.text+'</div><div class="opts">'+o+'</div></div>'});h+='<button class="sbtn" id="sbb">✅ NỘP BÀI</button>';document.getElementById('qa').innerHTML=h;
-document.querySelectorAll('.opt').forEach(function(o){o.onclick=function(){if(sub)return;var i=parseInt(this.dataset.i);var l=this.dataset.l;ua[i]=l;document.querySelectorAll('#c_'+i+' .opt').forEach(function(x){x.classList.remove('selected')});this.classList.add('selected');un()}});document.getElementById('sbb').onclick=gd;un()}
-function gd(){if(sub)return;sub=true;var c=0;res=[];ed.questions.forEach(function(q,i){var ic=(q.correct&&ua[i]===q.correct);if(ic)c++;res.push({ic,correct:q.correct});var card=document.getElementById('c_'+i);if(card){card.classList.add(ic?'correct':'wrong');if(q.correct){var co=card.querySelector('.opt[data-l="'+q.correct+'"]');if(co)co.classList.add('corhl')}}});var sc=(c/ed.questions.length)*10;var resultHTML='<div class="result"><div class="score">'+sc.toFixed(1)+'/10</div><div>Đúng: '+c+'/'+ed.questions.length+'</div><button onclick="location.reload()" style="margin-top:10px;padding:10px 24px;background:linear-gradient(135deg,#fdcb6e,#f39c12,#fdcb6e);background-size:200% 200%;border:none;border-radius:25px;cursor:pointer;font-weight:700;color:#1a1a2e;animation:goldShimmer 2s ease-in-out infinite">🔄 Làm lại</button></div>';document.getElementById('qa').insertAdjacentHTML('afterbegin',resultHTML);document.getElementById('sbb')?.remove();un(true);sf(c)}
-function sf(c){var w=ed.questions.length-c;document.getElementById('nb').insertAdjacentHTML('afterbegin','<div class="fb"><button class="fbtn active" data-f="all">Tất cả</button><button class="fbtn" data-f="correct">Đúng ('+c+')</button><button class="fbtn" data-f="wrong">Sai ('+w+')</button></div>');document.querySelectorAll('.fbtn').forEach(function(b){b.onclick=function(){cf=this.dataset.f;document.querySelectorAll('.fbtn').forEach(function(x){x.classList.remove('active')});this.classList.add('active');document.querySelectorAll('.qc').forEach(function(card,i){if(cf==='all')card.classList.remove('hidden');else if(cf==='correct')res[i].ic?card.classList.remove('hidden'):card.classList.add('hidden');else !res[i].ic?card.classList.remove('hidden'):card.classList.add('hidden')})}})}
-function un(r){r=r||false;var h='<h3 style="font-size:12px;color:#94a3b8;margin-bottom:8px">Điều hướng</h3>';ed.questions.forEach(function(q,i){var s='';if(r){s=res[i].ic?'rc':'rw'}else{s=ua[i]?'answered':''}h+='<div class="nc '+s+'" data-i="'+i+'">'+(i+1)+'</div>'});h+='<button class="sbtn" id="sbb2" style="margin-top:12px">✅ NỘP BÀI</button>';document.getElementById('nb').innerHTML=h;document.querySelectorAll('.nc').forEach(function(c){c.onclick=function(){var card=document.getElementById('c_'+c.dataset.i);if(card)card.scrollIntoView({behavior:'smooth',block:'center'})}});var sb2=document.getElementById('sbb2');if(sb2)sb2.onclick=gd}
-rnd();
-<\/script></body></html>`;
-            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = ex.name.replace(/[^a-z0-9]/gi, '_') + '.html';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            notify('✅ Đã xuất');
-        }
+// SET CORRECT
+function setCorrect(idx,letter){
+    if(currentMode!=='teacher')return;
+    questions[idx].correct=letter;
+    const card=$('q_'+idx);
+    if(card){
+        card.querySelectorAll('.opt').forEach(o=>{o.classList.remove('correct-answer');if(o.getAttribute('data-letter')===letter)o.classList.add('correct-answer')});
+        const badge=card.querySelector('.answer-badge');badge.textContent='✅ '+letter;badge.className='answer-badge set';
+    }
+    updateStats();
+}
 
-        // ============ DO EXAM ============
-        function doExam(id) {
-            const ex = exams.find(e => e.id === id);
-            if (!ex) return;
-            currentMode = 'doing';
-            currentExam = ex;
-            userAnswers = {};
-            submitted = false;
-            results = [];
-            currentFilter = 'all';
-
-            updateUIVisibility();
-
-            $('sidebarContent').innerHTML = `
-        <h3 style="margin-bottom:12px;color:var(--text)">📑 Điều hướng</h3>
-        <div class="nav-circles" id="navCircles" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center">
-            ${ex.questions.map((_,i) => `<div class="nav-circle" id="nav_${i}" onclick="scrollToQ(${i})">${i+1}</div>`).join('')}
-        </div>
-        <div class="filter-buttons" id="filterBtns" style="display:flex;gap:4px;justify-content:center;margin-top:12px;flex-wrap:wrap"></div>
-        <button class="submit-btn" id="submitSidebarBtn" onclick="submitExam()" style="margin-top:16px">✅ Nộp bài</button>
-        <div id="submitArea" style="margin-top:12px"></div>`;
-
-            renderExamUI();
-        }
-
-        function scrollToQ(i) {
-            const card = $('q_' + i);
-            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-
-        function renderExamUI() {
-            if (!currentExam) return;
-            const ex = currentExam;
-
-            let html = ex.questions.map((q, i) => `
-        <div class="q-card" id="q_${i}">
-            <div class="q-text">Câu ${i+1}: ${q.text}</div>
-            <div class="options">
-                ${q.options.map(o => `
-                    <div class="opt ${userAnswers[i] === o.label ? 'selected-answer' : ''}" 
-                         id="opt_${i}_${o.label}"
-                         data-i="${i}" data-l="${o.label}"
-                         onclick="selectOption(${i},'${o.label}')">
-                        <span class="opt-letter">${o.label}</span>
-                        <span>${o.content || '(Trống)'}</span>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `).join('');
-
-            html += `<div id="resultArea"></div>`;
-            html += `<div style="text-align:center;margin-top:12px">
-        <button class="btn btn-outline btn-sm" onclick="backToTeacher()" style="display:none" id="backToTeacherBtn">← Quay về</button>
-    </div>`;
-
-            $('panel').innerHTML = html;
-            setupScrollToTop();
-
-            const sb = $('submitSidebarBtn');
-            if (sb) { sb.style.display = 'block';
-                sb.textContent = '✅ Nộp bài';
-                sb.onclick = submitExam; }
-            $('submitArea').innerHTML = '';
-            $('filterBtns').innerHTML = '';
-            // Ẩn nút quay về khi chưa nộp bài
-            const backBtn = $('backToTeacherBtn');
-            if (backBtn) backBtn.style.display = 'none';
-        }
-
-        function selectOption(i, label) {
-            if (submitted || currentMode !== 'doing') return;
-            userAnswers[i] = label;
-
-            const card = $('q_' + i);
-            if (card) {
-                card.querySelectorAll('.opt').forEach(o => {
-                    o.classList.remove('selected-answer');
-                    if (o.getAttribute('data-l') === label) o.classList.add('selected-answer');
-                });
-            }
-            const nav = $('nav_' + i);
-            if (nav) nav.classList.add('answered');
-        }
-
-        function submitExam() {
-            if (submitted || !currentExam) return;
-            submitted = true;
-            const ex = currentExam;
-
-            let correct = 0;
-            results = [];
-
-            ex.questions.forEach((q, i) => {
-                const isCorrect = (q.correct && userAnswers[i] === q.correct);
-                if (isCorrect) correct++;
-                results.push({ isCorrect, correct: q.correct });
-
-                const card = $('q_' + i);
-                if (card) {
-                    card.classList.add(isCorrect ? 'correct-card' : 'wrong-card');
-                    if (q.correct) {
-                        const correctOpt = $('opt_' + i + '_' + q.correct);
-                        if (correctOpt) correctOpt.classList.add('correct-answer');
-                    }
-                }
-            });
-
-            const score = (correct / ex.questions.length * 10).toFixed(2);
-            const wrong = ex.questions.length - correct;
-
-            ex.questions.forEach((_, i) => {
-                const nav = $('nav_' + i);
-                if (nav) nav.className = 'nav-circle ' + (results[i].isCorrect ? 'result-correct' :
-                    'result-wrong');
-            });
-
-            const fb = $('filterBtns');
-            if (fb) {
-                fb.innerHTML = `
-            <button class="filter-btn active" onclick="filterCards('all')">📋 Tất cả</button>
-            <button class="filter-btn" onclick="filterCards('correct')">✅ Đúng (${correct})</button>
-            <button class="filter-btn" onclick="filterCards('wrong')">❌ Sai (${wrong})</button>
-        `;
-            }
-
-            const resultHTML = `
-        <div id="resultCard" class="result-card" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:20px;text-align:center;margin-bottom:20px">
-            <div style="font-size:2rem;font-weight:800;background:linear-gradient(135deg,#fdcb6e,#f39c12);-webkit-background-clip:text;-webkit-text-fill-color:transparent">🏆 ${score}/10</div>
-            <div style="margin:8px 0">✅ Đúng ${correct}/${ex.questions.length}</div>
-            <button class="btn btn-outline btn-sm" onclick="retryExam()" style="margin-top:8px;border-color:rgba(253,203,110,0.3);color:#fdcb6e">🔄 Làm lại</button>
-        </div>
-    `;
-
-            const oldResult = $('resultCard');
-            if (oldResult) oldResult.remove();
-            const oldResultArea = $('resultArea');
-            if (oldResultArea) oldResultArea.remove();
-
-            const panel = $('panel');
-            panel.insertAdjacentHTML('afterbegin', resultHTML);
-            panel.scrollTo({ top: 0, behavior: 'smooth' });
-
-            $('submitArea').innerHTML = `
-        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:12px;text-align:center;margin-top:12px">
-            <div style="font-weight:700;background:linear-gradient(135deg,#fdcb6e,#f39c12);-webkit-background-clip:text;-webkit-text-fill-color:transparent">🏆 ${score}/10</div>
-            <div style="font-size:0.75rem;color:var(--text2)">${correct}/${ex.questions.length} đúng</div>
-        </div>
-    `;
-            const sb = $('submitSidebarBtn');
-            if (sb) sb.style.display = 'none';
-
-            ex.questions.forEach((_, i) => {
-                const nav = $('nav_' + i);
-                if (nav) nav.onclick = () => scrollToQ(i);
-            });
-
-            // Hiện nút quay về
-            const backBtn = $('backToTeacherBtn');
-            if (backBtn) {
-                backBtn.style.display = 'inline-block';
-                backBtn.style.marginTop = '20px';
-                backBtn.style.padding = '12px 28px';
-                backBtn.style.fontSize = '1rem';
-                backBtn.style.fontWeight = '700';
-                backBtn.style.borderColor = 'rgba(253,203,110,0.5)';
-                backBtn.style.color = '#fdcb6e';
-                backBtn.style.background = 'rgba(253,203,110,0.15)';
-                backBtn.style.width = '100%';
-                backBtn.style.maxWidth = '300px';
-            }
-
-            // Hiện lại top bar trên mobile sau khi nộp bài
-            if (isMobile()) {
-                $('topBar').style.display = 'flex';
-            }
-        }
-
-        function filterCards(type) {
-            currentFilter = type;
-            document.querySelectorAll('#filterBtns .filter-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-
-            document.querySelectorAll('#panel .q-card').forEach((card, i) => {
-                if (type === 'all') card.classList.remove('hidden');
-                else if (type === 'correct') results[i]?.isCorrect ? card.classList.remove('hidden') : card
-                    .classList.add('hidden');
-                else results[i] && !results[i].isCorrect ? card.classList.remove('hidden') : card.classList.add(
-                    'hidden');
-            });
-        }
-
-        function retryExam() {
-            userAnswers = {};
-            submitted = false;
-            results = [];
-            renderExamUI();
-            if (currentExam) {
-                currentExam.questions.forEach((_, i) => {
-                    const nav = $('nav_' + i);
-                    if (nav) { nav.className = 'nav-circle';
-                        nav.onclick = () => scrollToQ(i); }
-                });
-            }
-            $('filterBtns').innerHTML = '';
-            $('submitArea').innerHTML = '';
-            const sb = $('submitSidebarBtn');
-            if (sb) { sb.style.display = 'block';
-                sb.textContent = '✅ Nộp bài';
-                sb.onclick = submitExam; }
-            const resultCard = $('resultCard');
-            if (resultCard) resultCard.remove();
-            // Ẩn lại nút quay về và top bar trên mobile
-            const backBtn = $('backToTeacherBtn');
-            if (backBtn) backBtn.style.display = 'none';
-            if (isMobile()) {
-                $('topBar').style.display = 'none';
-            }
-        }
-
-        function backToTeacher() {
-            currentMode = 'teacher';
-            currentExam = null;
-            userAnswers = {};
-            submitted = false;
-            results = [];
-            renderTeacher();
-            $('sidebar').classList.remove('open');
-        }
-
-        // ============ KEYBOARD SHORTCUT ============
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                $('sidebar').classList.toggle('open');
-            }
-            if (e.key === 'Escape') {
-                $('sidebar').classList.remove('open');
-                document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
-            }
+// RENDER TEACHER
+function renderTeacher(){
+    currentMode='teacher';currentExam=null;userAnswers={};submitted=false;results=[];
+    updateStats();
+    let sideHtml='<h3 style="margin-bottom:10px;color:var(--text);font-size:.9rem">📋 Đề thi</h3>';
+    if(exams.length){
+        exams.forEach(ex=>{
+            sideHtml+=`<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center"><div><b style="font-size:.85rem">${ex.name}</b><br><small style="color:var(--text2);font-size:.7rem">${ex.code} - ${ex.questions.length} câu</small></div><div style="display:flex;gap:3px"><button class="btn btn-outline btn-sm" onclick="exportExam('${ex.id}')">📥</button><button class="btn btn-primary btn-sm" onclick="doExam('${ex.id}')">🎯</button></div></div>`;
         });
+        sideHtml+='<button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;color:var(--red)" onclick="deleteExams()">🗑 Xóa đề</button>';
+    }else sideHtml+='<div style="color:var(--text2);text-align:center;padding:20px;font-size:.85rem">Chưa có đề</div>';
+    $('sidebarContent').innerHTML=sideHtml;
+    if(!questions.length){$('panel').innerHTML='<div style="text-align:center;padding:60px;color:var(--text2)">💡<br>Chưa có câu hỏi</div>';return}
+    let html='';
+    questions.forEach((q,idx)=>{
+        const imgHtml=q.image?`<img src="${q.image}" class="q-image">`:'';
+        const opts=q.options.map(opt=>`<div class="opt ${q.correct===opt.label?'correct-answer':''}" data-letter="${opt.label}" onclick="setCorrect(${idx},'${opt.label}')"><span class="opt-letter">${opt.label}</span><span>${opt.content||'(Trống)'}</span></div>`).join('');
+        html+=`<div class="q-card" id="q_${idx}">${imgHtml}<div class="q-text">Câu ${q.id}: ${q.text}</div><div class="options">${opts}</div><div class="answer-badge ${q.correct?'set':'unset'}">${q.correct?'✅ '+q.correct:'⚡ Chưa chọn'}</div><div style="margin-top:6px;display:flex;gap:4px"><button class="btn btn-outline btn-sm" onclick="editQ(${idx})">✏️</button><button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="deleteQ(${idx})">🗑</button></div></div>`;
+    });
+    $('panel').innerHTML=html;setupScrollToTop();
+}
 
-        // ============ RESIZE HANDLER ============
-        window.addEventListener('resize', function() {
-            updateUIVisibility();
-        });
+function addQuestion(){
+    questions.push({id:questions.length+1,text:'Nhập nội dung',options:[{label:'A',content:''},{label:'B',content:''},{label:'C',content:''},{label:'D',content:''}],correct:null,image:null});
+    renderTeacher();
+    setTimeout(()=>{const c=$('panel').querySelector('.q-card:last-child');if(c)c.scrollIntoView({behavior:'smooth',block:'center'})},100);
+}
+function deleteQ(idx){questions.splice(idx,1);questions.forEach((q,i)=>q.id=i+1);renderTeacher()}
+function editQ(idx){
+    const q=questions[idx];
+    const overlay=document.createElement('div');overlay.className='modal-overlay';
+    overlay.innerHTML=`<div class="modal-dialog" style="text-align:left;max-width:500px"><h3 style="text-align:center">✏️ Sửa câu ${idx+1}</h3>${q.image?`<img src="${q.image}" style="max-width:100%;max-height:120px;border-radius:8px;margin-bottom:8px">`:''}<label style="font-size:.75rem;color:var(--text2)">Nội dung:</label><textarea id="et" rows="2" style="width:100%;padding:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text);font-size:.85rem;resize:vertical">${q.text}</textarea>${q.options.map((o,i)=>`<label style="font-size:.75rem;color:var(--text2)">${['A','B','C','D'][i]}:</label><input id="e${i}" value="${o.content||''}" style="width:100%;padding:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text);font-size:.85rem">`).join('')}<label style="font-size:.75rem;color:var(--text2)">Đáp án đúng:</label><select id="ec" style="width:100%;padding:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text)"><option value="">-- Chọn --</option>${['A','B','C','D'].map(l=>`<option value="${l}" ${q.correct===l?'selected':''}>${l}</option>`).join('')}</select><div class="modal-buttons"><button class="btn-cancel" id="cancelEdit">Hủy</button><button class="btn-gold-modal" id="saveEdit">💾 Lưu</button></div></div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove()});
+    overlay.querySelector('#cancelEdit').onclick=()=>overlay.remove();
+    overlay.querySelector('#saveEdit').onclick=()=>{q.text=overlay.querySelector('#et').value.trim()||q.text;q.options.forEach((o,i)=>o.content=overlay.querySelector('#e'+i).value.trim());q.correct=overlay.querySelector('#ec').value||null;overlay.remove();renderTeacher();notify('✅ Đã lưu')};
+}
 
-        // ============ INIT ============
-        $('fileInput').addEventListener('change', async e => {
-            if (e.target.files[0]) {
-                $('fileName').textContent = e.target.files[0].name;
-                await loadFile(e.target.files[0]);
-            }
-        });
+// CREATE EXAM
+function showCreateExamModal(){
+    if(!questions.length)return notify('❌ Chưa có câu hỏi');
+    const overlay=document.createElement('div');overlay.className='modal-overlay';
+    overlay.innerHTML=`<div class="modal-dialog"><h3>📌 Tạo đề</h3><input type="text" id="examNameInput" value="Đề ${new Date().toLocaleDateString('vi-VN')}"><div class="modal-buttons"><button class="btn-cancel" id="cancelCreate">Hủy</button><button class="btn-gold-modal" id="confirmCreate">✨ Tạo</button></div></div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove()});
+    overlay.querySelector('#cancelCreate').onclick=()=>overlay.remove();
+    overlay.querySelector('#confirmCreate').onclick=()=>{
+        const name=overlay.querySelector('#examNameInput').value.trim();if(!name)return;
+        const examData={id:Date.now().toString(),name,code:Math.random().toString(36).substring(2,8).toUpperCase(),questions:JSON.parse(JSON.stringify(questions)),createdAt:Date.now()};
+        exams.unshift(examData);save();overlay.remove();renderTeacher();notify('✅ '+name);
+    };
+}
+function showResetModal(){
+    const overlay=document.createElement('div');overlay.className='modal-overlay';
+    overlay.innerHTML=`<div class="modal-dialog"><h3>🔄 Reset đáp án</h3><div style="color:var(--text2);margin-bottom:12px;font-size:.85rem">Xóa tất cả đáp án?</div><div class="modal-buttons"><button class="btn-cancel" id="cancelReset">Hủy</button><button class="btn-gold-modal" id="confirmReset" style="background:#ff6b6b">🗑 Xác nhận</button></div></div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove()});
+    overlay.querySelector('#cancelReset').onclick=()=>overlay.remove();
+    overlay.querySelector('#confirmReset').onclick=()=>{questions.forEach(q=>q.correct=null);overlay.remove();renderTeacher();notify('🔄 Đã reset')};
+}
+function deleteExams(){
+    if(!exams.length)return;
+    const overlay=document.createElement('div');overlay.className='modal-overlay';
+    overlay.innerHTML=`<div class="modal-dialog"><h3>🗑 Xóa đề</h3><div style="max-height:250px;overflow-y:auto;margin:8px 0;text-align:left">${exams.map(e=>`<label style="display:flex;align-items:center;gap:6px;margin:3px 0;cursor:pointer;padding:6px;font-size:.85rem"><input type="checkbox" value="${e.id}">${e.name} (${e.code})</label>`).join('')}</div><div class="modal-buttons"><button class="btn-cancel" id="cancelDel">Hủy</button><button class="btn-gold-modal" id="delSel" style="background:#ff6b6b">🗑 Xóa</button></div></div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove()});
+    overlay.querySelector('#cancelDel').onclick=()=>overlay.remove();
+    overlay.querySelector('#delSel').onclick=()=>{const ids=[...overlay.querySelectorAll('input:checked')].map(i=>i.value);if(!ids.length)return;exams=exams.filter(e=>!ids.includes(e.id));save();overlay.remove();renderTeacher();notify('Đã xóa')};
+}
 
-        $('fileInput2').addEventListener('change', async e => {
-            if (e.target.files[0]) await loadFile(e.target.files[0]);
-        });
+// EXPORT
+function exportExam(id){
+    const ex=exams.find(e=>e.id===id);if(!ex)return;
+    const html=`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>LightQuiz - ${ex.name}</title><style>*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}html{scroll-behavior:smooth}body{background:linear-gradient(135deg,#0f0f1e,#1a1a2e);color:#e2e8f0;padding:16px;min-height:100vh}.cont{max-width:900px;margin:0 auto}.head{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:16px;text-align:center;margin-bottom:14px}.head h1{font-size:1.5rem;font-weight:800}.head span{background:linear-gradient(135deg,#fdcb6e,#f39c12);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.qa{max-height:70vh;overflow-y:auto}.qc{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:14px;margin:10px 0}.qc.correct{border-left:3px solid #00b894}.qc.wrong{border-left:3px solid #ff6b6b}.qc.hidden{display:none}.qt{font-weight:700;margin-bottom:8px;line-height:1.5;font-size:.9rem}.qi{max-width:100%;max-height:200px;border-radius:8px;margin-bottom:8px}.opts{display:flex;flex-direction:column;gap:4px}.opt{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:40px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);cursor:pointer;font-size:.85rem}.opt:hover{background:rgba(255,255,255,0.06)}.opt.selected{background:rgba(253,203,110,0.25);border-color:rgba(253,203,110,0.5)}.opt.corhl{background:rgba(0,184,148,0.15);border-color:rgba(0,184,148,0.3)}.lt{font-weight:800;width:26px;height:26px;background:rgba(253,203,110,0.2);color:#fdcb6e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0}.opt.selected .lt{background:#fff;color:#1a1a2e}.opt.corhl .lt{background:#00b894;color:#fff}.sbtn{background:linear-gradient(135deg,#fdcb6e,#f39c12);color:#1a1a2e;border:none;padding:12px;border-radius:40px;font-size:.9rem;cursor:pointer;width:100%;margin:10px 0;font-weight:700}.result{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px;text-align:center;margin-top:12px}.score{font-size:1.8rem;font-weight:800;background:linear-gradient(135deg,#fdcb6e,#f39c12);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.fb{display:flex;gap:4px;justify-content:center;margin:8px 0}.fbtn{padding:4px 10px;border-radius:15px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:#94a3b8;cursor:pointer;font-size:11px}.fbtn.active{background:rgba(253,203,110,0.3);color:#fdcb6e}</style></head><body><div class="cont"><div class="head"><h1>💡 <span>LightQuiz</span></h1><div style="color:#94a3b8;font-size:.8rem">Mã đề: ${ex.code}</div></div><div class="qa" id="qa"></div></div><script>
+const ed=${JSON.stringify({name:ex.name,code:ex.code,questions:ex.questions})};let ua={},sub=false,res=[],cf="all";
+function rnd(){var h='';ed.questions.forEach(function(q,i){var ih=q.image?'<img src="'+q.image+'" class="qi">':'';var o='';q.options.forEach(function(opt){o+='<div class="opt" data-i="'+i+'" data-l="'+opt.label+'"><div class="lt">'+opt.label+'</div><div>'+opt.content+'</div></div>'});h+='<div class="qc" id="c_'+i+'">'+ih+'<div class="qt">Câu '+(i+1)+': '+q.text+'</div><div class="opts">'+o+'</div></div>'});h+='<button class="sbtn" id="sbb">✅ NỘP BÀI</button>';document.getElementById('qa').innerHTML=h;
+document.querySelectorAll('.opt').forEach(function(o){o.onclick=function(){if(sub)return;var i=parseInt(this.dataset.i);var l=this.dataset.l;ua[i]=l;document.querySelectorAll('#c_'+i+' .opt').forEach(function(x){x.classList.remove('selected')});this.classList.add('selected')}});document.getElementById('sbb').onclick=gd}
+function gd(){if(sub)return;sub=true;var c=0;res=[];ed.questions.forEach(function(q,i){var ic=(q.correct&&ua[i]===q.correct);if(ic)c++;res.push({ic,correct:q.correct});var card=document.getElementById('c_'+i);if(card){card.classList.add(ic?'correct':'wrong');if(q.correct){var co=card.querySelector('.opt[data-l="'+q.correct+'"]');if(co)co.classList.add('corhl')}}});var sc=(c/ed.questions.length)*10;var rh='<div class="result"><div class="score">'+sc.toFixed(1)+'/10</div><div>Đúng: '+c+'/'+ed.questions.length+'</div><button onclick="location.reload()" style="margin-top:8px;padding:8px 20px;background:linear-gradient(135deg,#fdcb6e,#f39c12);border:none;border-radius:20px;cursor:pointer;font-weight:700;color:#1a1a2e">🔄 Làm lại</button></div>';document.getElementById('qa').insertAdjacentHTML('afterbegin',rh);document.getElementById('sbb').remove();var w=ed.questions.length-c;var fh='<div class="fb"><button class="fbtn active" data-f="all">Tất cả</button><button class="fbtn" data-f="correct">Đúng ('+c+')</button><button class="fbtn" data-f="wrong">Sai ('+w+')</button></div>';document.getElementById('qa').insertAdjacentHTML('afterbegin',fh);document.querySelectorAll('.fbtn').forEach(function(b){b.onclick=function(){cf=this.dataset.f;document.querySelectorAll('.fbtn').forEach(function(x){x.classList.remove('active')});this.classList.add('active');document.querySelectorAll('.qc').forEach(function(card,i){if(cf==='all')card.classList.remove('hidden');else if(cf==='correct')res[i].ic?card.classList.remove('hidden'):card.classList.add('hidden');else !res[i].ic?card.classList.remove('hidden'):card.classList.add('hidden')})}})}
+rnd();<\/script></body></html>`;
+    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download=ex.name.replace(/[^a-z0-9]/gi,'_')+'.html';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    notify('✅ Đã xuất');
+}
 
-        // Drag & drop
-        const uploadBox = $('uploadBox');
-        uploadBox.addEventListener('dragover', e => { e.preventDefault();
-            uploadBox.classList.add('drag-over'); });
-        uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('drag-over'));
-        uploadBox.addEventListener('drop', async e => {
-            e.preventDefault();
-            uploadBox.classList.remove('drag-over');
-            const file = e.dataTransfer.files[0];
-            if (file && file.name.endsWith('.docx')) {
-                $('fileName').textContent = file.name;
-                await loadFile(file);
-            }
-        });
-        document.addEventListener('dragover', e => e.preventDefault());
-        document.addEventListener('drop', e => e.preventDefault());
+// DO EXAM
+function doExam(id){
+    const ex=exams.find(e=>e.id===id);if(!ex)return;
+    currentMode='doing';currentExam=ex;userAnswers={};submitted=false;results=[];
+    $('actions').style.display='none';
+    $('sidebarContent').innerHTML=`<h3 style="margin-bottom:10px;color:var(--text);font-size:.9rem">📑 Điều hướng</h3><div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">${ex.questions.map((_,i)=>`<div class="nav-circle" id="nav_${i}" onclick="scrollToQ(${i})">${i+1}</div>`).join('')}</div><div id="filterBtns" style="display:flex;gap:3px;justify-content:center;margin-top:10px;flex-wrap:wrap"></div><button class="submit-btn" id="submitSidebarBtn" onclick="submitExam()">✅ Nộp bài</button><div id="submitArea" style="margin-top:8px"></div>`;
+    renderExamUI();
+}
+function scrollToQ(i){const c=$('q_'+i);if(c)c.scrollIntoView({behavior:'smooth',block:'center'})}
+function renderExamUI(){
+    if(!currentExam)return;
+    let html=currentExam.questions.map((q,i)=>{
+        const imgHtml=q.image?`<img src="${q.image}" class="q-image" style="max-width:100%;max-height:180px;border-radius:8px;margin-bottom:6px">`:'';
+        const opts=q.options.map(o=>`<div class="opt ${userAnswers[i]===o.label?'selected-answer':''}" id="opt_${i}_${o.label}" onclick="selectOption(${i},'${o.label}')"><span class="opt-letter">${o.label}</span><span>${o.content||'(Trống)'}</span></div>`).join('');
+        return `<div class="q-card" id="q_${i}">${imgHtml}<div class="q-text">Câu ${i+1}: ${q.text}</div><div class="options">${opts}</div></div>`;
+    }).join('');
+    html+=`<div id="resultArea"></div><div style="text-align:center;margin-top:10px"><button class="btn btn-outline btn-sm" onclick="backToTeacher()" style="display:none" id="backBtn">← Quay về</button></div>`;
+    $('panel').innerHTML=html;setupScrollToTop();
+    $('submitSidebarBtn').style.display='block';$('submitArea').innerHTML='';$('filterBtns').innerHTML='';
+}
+function selectOption(i,l){
+    if(submitted||currentMode!=='doing')return;
+    userAnswers[i]=l;
+    const c=$('q_'+i);if(c){c.querySelectorAll('.opt').forEach(o=>{o.classList.remove('selected-answer');if(o.id==='opt_'+i+'_'+l)o.classList.add('selected-answer')})}
+    const n=$('nav_'+i);if(n)n.classList.add('answered');
+}
+function submitExam(){
+    if(submitted||!currentExam)return;submitted=true;
+    let correct=0;results=[];
+    currentExam.questions.forEach((q,i)=>{
+        const ok=(q.correct&&userAnswers[i]===q.correct);
+        if(ok)correct++;results.push({isCorrect:ok,correct:q.correct});
+        const c=$('q_'+i);if(c){c.classList.add(ok?'correct-card':'wrong-card');if(q.correct){const co=$('opt_'+i+'_'+q.correct);if(co)co.classList.add('correct-answer')}}
+    });
+    const total=currentExam.questions.length,score=(correct/total*10).toFixed(1);
+    currentExam.questions.forEach((_,i)=>{const n=$('nav_'+i);if(n)n.className='nav-circle '+(results[i].isCorrect?'result-correct':'result-wrong')});
+    $('filterBtns').innerHTML=`<button class="filter-btn active" onclick="filterCards('all')">Tất cả</button><button class="filter-btn" onclick="filterCards('correct')">✅ ${correct}</button><button class="filter-btn" onclick="filterCards('wrong')">❌ ${total-correct}</button>`;
+    $('resultArea').innerHTML=`<div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px;text-align:center;margin-bottom:16px"><div style="font-size:1.8rem;font-weight:800;background:linear-gradient(135deg,#fdcb6e,#f39c12);-webkit-background-clip:text;-webkit-text-fill-color:transparent">🏆 ${score}/10</div><div>✅ ${correct}/${total}</div><button class="btn btn-outline btn-sm" onclick="retryExam()" style="margin-top:6px">🔄 Làm lại</button></div>`;
+    $('submitArea').innerHTML=`<div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:8px;text-align:center;margin-top:8px;font-size:.8rem"><span style="color:var(--yellow);font-weight:700">🏆 ${score}/10</span></div>`;
+    $('submitSidebarBtn').style.display='none';$('backBtn').style.display='inline-block';
+    $('panel').scrollTo({top:0,behavior:'smooth'});
+}
+function filterCards(type){
+    document.querySelectorAll('#filterBtns .filter-btn').forEach(b=>b.classList.remove('active'));
+    event.target.classList.add('active');
+    document.querySelectorAll('#panel .q-card').forEach((c,i)=>{if(type==='all')c.classList.remove('hidden');else if(type==='correct')results[i]?.isCorrect?c.classList.remove('hidden'):c.classList.add('hidden');else results[i]&&!results[i].isCorrect?c.classList.remove('hidden'):c.classList.add('hidden')});
+}
+function retryExam(){
+    userAnswers={};submitted=false;results=[];
+    renderExamUI();
+    $('filterBtns').innerHTML='';$('submitArea').innerHTML='';$('submitSidebarBtn').style.display='block';$('backBtn').style.display='none';
+}
+function backToTeacher(){currentMode='teacher';currentExam=null;userAnswers={};submitted=false;results=[];$('actions').style.display='flex';renderTeacher();$('sidebar').classList.remove('open')}
 
-        // Close sidebar on outside click
-        document.addEventListener('click', e => {
-            const sidebar = $('sidebar');
-            if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== $('menuBtn') && !$(
-                    'menuBtn').contains(e.target)) {
-                sidebar.classList.remove('open');
-            }
-        });
+// FILE EVENTS
+$('fileInput').addEventListener('change',async e=>{if(e.target.files[0]){$('fileName').textContent=e.target.files[0].name;await loadFile(e.target.files[0])}});
+$('fileInput3').addEventListener('change',async e=>{if(e.target.files[0])await loadFile(e.target.files[0],true)});
+$('imageInput').addEventListener('change',function(){
+    if(this.files[0]&&window._imgTargetQ!==undefined){
+        loadImageToQuestion(this.files[0],window._imgTargetQ);
+        delete window._imgTargetQ;
+        this.value='';
+    }
+});
 
-        $('menuBtn').addEventListener('click', () => $('sidebar').classList.toggle('open'));
-    </script>
+// DRAG & DROP
+const uploadBox=$('uploadBox');
+uploadBox.addEventListener('dragover',e=>{e.preventDefault();uploadBox.classList.add('drag-over')});
+uploadBox.addEventListener('dragleave',()=>uploadBox.classList.remove('drag-over'));
+uploadBox.addEventListener('drop',async e=>{e.preventDefault();uploadBox.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f&&f.name.endsWith('.docx')){$('fileName').textContent=f.name;await loadFile(f)}});
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',e=>e.preventDefault());
+
+// KEYBOARD
+document.addEventListener('keydown',e=>{
+    if(e.key==='Tab'){e.preventDefault();$('sidebar').classList.toggle('open')}
+    if(e.key==='Escape'){$('sidebar').classList.remove('open');document.querySelectorAll('.modal-overlay').forEach(m=>m.remove());$('dropdownMenu').classList.remove('show')}
+});
+document.addEventListener('click',e=>{
+    const s=$('sidebar');
+    if(s.classList.contains('open')&&!s.contains(e.target)&&e.target!==$('menuBtn'))s.classList.remove('open');
+});
+$('menuBtn').addEventListener('click',()=>$('sidebar').classList.toggle('open'));
+</script>
 </body>
 </html>
